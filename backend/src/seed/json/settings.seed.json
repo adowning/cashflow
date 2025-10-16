@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Premium Gaming Configuration",
+    "referralCodeCount": 45,
+    "referralCommissionRate": 0.32,
+    "rates": "[{\"USD\": 1}, {\"EUR\": 0.85}, {\"GBP\": 0.73}]",
+    "createdAt": "2024-01-15T10:00:00.000Z",
+    "updatedAt": "2024-01-15T10:00:00.000Z"
+  },
+  {
+    "name": "Standard Player Settings",
+    "referralCodeCount": 25,
+    "referralCommissionRate": 0.18,
+    "rates": "[{\"USD\": 1}, {\"CAD\": 1.35}]",
+    "createdAt": "2024-02-20T14:30:00.000Z",
+    "updatedAt": "2024-02-20T14:30:00.000Z"
+  },
+  {
+    "name": "VIP Exclusive Configuration",
+    "referralCodeCount": 75,
+    "referralCommissionRate": 0.45,
+    "rates": "[{\"USD\": 1}, {\"EUR\": 0.85}, {\"CHF\": 0.92}]",
+    "createdAt": "2024-03-10T09:15:00.000Z",
+    "updatedAt": "2024-03-10T09:15:00.000Z"
+  },
+  {
+    "name": "Tournament Mode Settings",
+    "referralCodeCount": 60,
+    "referralCommissionRate": 0.28,
+    "rates": "[{\"USD\": 1}, {\"JPY\": 150}]",
+    "createdAt": "2024-04-05T16:45:00.000Z",
+    "updatedAt": "2024-04-05T16:45:00.000Z"
+  },
+  {
+    "name": "Weekend Boost Configuration",
+    "referralCodeCount": 35,
+    "referralCommissionRate": 0.22,
+    "rates": "[{\"USD\": 1}, {\"AUD\": 1.52}]",
+    "createdAt": "2024-05-12T11:20:00.000Z",
+    "updatedAt": "2024-05-12T11:20:00.000Z"
+  },
+  {
+    "name": "Loyalty Program Settings",
+    "referralCodeCount": 50,
+    "referralCommissionRate": 0.35,
+    "rates": "[{\"USD\": 1}, {\"SEK\": 10.5}]",
+    "createdAt": "2024-06-18T13:10:00.000Z",
+    "updatedAt": "2024-06-18T13:10:00.000Z"
+  },
+  {
+    "name": "High Roller Configuration",
+    "referralCodeCount": 90,
+    "referralCommissionRate": 0.50,
+    "rates": "[{\"USD\": 1}, {\"HKD\": 7.8}]",
+    "createdAt": "2024-07-22T15:35:00.000Z",
+    "updatedAt": "2024-07-22T15:35:00.000Z"
+  },
+  {
+    "name": "New Player Welcome Setup",
+    "referralCodeCount": 30,
+    "referralCommissionRate": 0.15,
+    "rates": "[{\"USD\": 1}, {\"NZD\": 1.65}]",
+    "createdAt": "2024-08-30T12:50:00.000Z",
+    "updatedAt": "2024-08-30T12:50:00.000Z"
+  },
+  {
+    "name": "Seasonal Promotion Config",
+    "referralCodeCount": 40,
+    "referralCommissionRate": 0.25,
+    "rates": "[{\"USD\": 1}, {\"NOK\": 10.8}]",
+    "createdAt": "2024-09-14T17:25:00.000Z",
+    "updatedAt": "2024-09-14T17:25:00.000Z"
+  },
+  {
+    "name": "Affiliate Network Settings",
+    "referralCodeCount": 80,
+    "referralCommissionRate": 0.40,
+    "rates": "[{\"USD\": 1}, {\"SGD\": 1.35}, {\"KRW\": 1300}]",
+    "createdAt": "2024-10-08T08:40:00.000Z",
+    "updatedAt": "2024-10-08T08:40:00.000Z"
+  }
+]

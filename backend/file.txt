@@ -1,0 +1,189 @@
+🔍 Finding VS Code process IDs...
+✅ Found 59 VS Code processes. PIDs: 2911 3222 3224 3252 3529 3620 3675 3852 3910 3915 4209 4211 4217 4273 4286 5089 5091 5092 5114 5115 5123 5138 5145 5157 5170 5210 5359 5568 5584 7525 7826 8486 39875 39900 39905 39968 40026 40048 40185 40311 40926 40927 40973 41023 228914 228964 229031 229042 235896 235916 235925 235976 235977 236011 236025 236104 236130 236204 236206
+
+--- Watches Grouped by Process ID (PID) ---
+
+--- PID: 2911 ---
+anon_inode:inotify
+anon_inode:inotify
+anon_inode:inotify
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 3222 ---
+
+--- PID: 3224 ---
+
+--- PID: 3252 ---
+
+--- PID: 3529 ---
+
+--- PID: 3620 ---
+
+--- PID: 3675 ---
+anon_inode:inotify
+
+--- PID: 3852 ---
+
+--- PID: 3910 ---
+
+--- PID: 3915 ---
+
+--- PID: 4209 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 4211 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 4217 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 4273 ---
+anon_inode:inotify
+
+--- PID: 4286 ---
+anon_inode:inotify
+
+--- PID: 5089 ---
+anon_inode:inotify
+
+--- PID: 5091 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 5092 ---
+anon_inode:inotify
+
+--- PID: 5114 ---
+anon_inode:inotify
+
+--- PID: 5115 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 5123 ---
+anon_inode:inotify
+
+--- PID: 5138 ---
+anon_inode:inotify
+
+--- PID: 5145 ---
+anon_inode:inotify
+
+--- PID: 5157 ---
+anon_inode:inotify
+
+--- PID: 5170 ---
+anon_inode:inotify
+
+--- PID: 5210 ---
+anon_inode:inotify
+
+--- PID: 5359 ---
+anon_inode:inotify
+
+--- PID: 5568 ---
+anon_inode:inotify
+
+--- PID: 5584 ---
+anon_inode:inotify
+
+--- PID: 7525 ---
+
+--- PID: 7826 ---
+anon_inode:inotify
+
+--- PID: 8486 ---
+
+--- PID: 39875 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 39900 ---
+anon_inode:inotify
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 39905 ---
+
+--- PID: 39968 ---
+anon_inode:inotify
+
+--- PID: 40026 ---
+anon_inode:inotify
+
+--- PID: 40048 ---
+anon_inode:inotify
+
+--- PID: 40185 ---
+anon_inode:inotify
+
+--- PID: 40311 ---
+anon_inode:inotify
+
+--- PID: 40926 ---
+anon_inode:inotify
+
+--- PID: 40927 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 40973 ---
+anon_inode:inotify
+
+--- PID: 41023 ---
+anon_inode:inotify
+
+--- PID: 228914 ---
+anon_inode:inotify
+
+--- PID: 228964 ---
+
+--- PID: 229031 ---
+
+--- PID: 229042 ---
+
+--- PID: 235896 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 235916 ---
+anon_inode:inotify
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 235925 ---
+
+--- PID: 235976 ---
+anon_inode:inotify
+
+--- PID: 235977 ---
+anon_inode:inotify
+anon_inode:inotify
+
+--- PID: 236011 ---
+anon_inode:inotify
+
+--- PID: 236025 ---
+anon_inode:inotify
+
+--- PID: 236104 ---
+anon_inode:inotify
+
+--- PID: 236130 ---
+anon_inode:inotify
+
+--- PID: 236204 ---
+anon_inode:inotify
+
+--- PID: 236206 ---
+anon_inode:inotify
+
+----------------------------------------------------
+--- All Unique Watched Paths (Combined) ---
+anon_inode:inotify
+
+✨ Done.

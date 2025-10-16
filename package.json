@@ -1,0 +1,46 @@
+{
+  "name": "app",
+  "type": "module",
+  "private": true,
+  "packageManager": "bun@1.2.22",
+  "engines": {
+    "node": "lts/*"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "check": "bun run check:unused && bun run check:eslint && bun run check:stylelint && bun run check:types",
+    "check:eslint": "eslint . --cache",
+    "check:stylelint": "stylelint '**/*.{css,scss,vue}' --ignorePath .gitignore --cache",
+    "check:types": "vue-tsc --noEmit",
+    "check:unused": "knip -n",
+    "dev": "bun scripts/dev.ts",
+    "lint": "bun run check:eslint && bun run check:stylelint",
+    "lint:inspect": "bunx @eslint/config-inspector",
+    "update": "bunx taze -I -rwi",
+    "seed:dev":"bun run --watch backend/src/seed/seed.ts"
+  },
+  "prisma": {
+    "schema": "backend/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "nanoid": "^5.1.6",
+    "postgres": "^3.4.7",
+    "prisma-generator-drizzle": "^0.7.6",
+    "prisma-generator-typescript-interfaces": "^3.1.0"
+  },
+  "devDependencies": {
+    "@kevinmarrec/eslint-config": "^1.5.1",
+    "@kevinmarrec/stylelint-config": "^1.2.1",
+    "@kevinmarrec/tsconfig": "^1.1.0",
+    "@types/bcryptjs": "^3.0.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.37.0",
+    "knip": "^5.65.0",
+    "stylelint": "^16.25.0",
+    "typescript": "~5.9.3",
+    "vue-tsc": "^3.1.1"
+  }
+}

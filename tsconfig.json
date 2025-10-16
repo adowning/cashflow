@@ -1,0 +1,13 @@
+{
+  "extends": "@kevinmarrec/tsconfig",
+  "compilerOptions": {
+    "paths": {
+      "@backend/*": ["./backend/src/*"],
+      "@frontend/*": ["./frontend/src/*"]
+    },
+    "noImplicitAny": false,
+    "forceConsistentCasingInFileNames": true,
+    "erasableSyntaxOnly": false
+  },
+  "exclude": ["**/dist/**"]
+}

@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "aaron-bond.better-comments",
+    "antfu.goto-alias",
+    "antfu.iconify",
+    "antfu.unocss",
+    "dbaeumer.vscode-eslint",
+    "eamodio.gitlens",
+    "github.vscode-github-actions",
+    "lokalise.i18n-ally",
+    "mikestead.dotenv",
+    "ms-azuretools.vscode-docker",
+    "pkief.material-icon-theme",
+    "redhat.vscode-yaml",
+    "stylelint.vscode-stylelint",
+    "vitest.explorer",
+    "vue.volar",
+    "yoavbls.pretty-ts-errors"
+  ]
+}

@@ -1,0 +1,26 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Bun
+        uses: kevinmarrec/workflows/setup-bun@v1
+
+      - name: Check unused files, dependencies, and exports
+        run: bun run check:unused
+
+      - name: Lint
+        run: bun run check:eslint && bun run check:stylelint
+
+      - name: Type check
+        run: bun run check:types
