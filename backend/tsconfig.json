@@ -1,6 +1,10 @@
-{
-  "extends": "../tsconfig.json",
-  "compilerOptions": {
-    "lib": ["ESNext"]
-  }
+{ "extends": "../tsconfig.json", "compilerOptions": { "strict": true,
+   "paths": {
+            "@/*": ["./src/*"],
+            "#/*": ["./src/*"],
+            "@@/*": ["./*"],
+              "@backend/*": ["./src/*"],
+        }
+}
+
 }

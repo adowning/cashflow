@@ -1,18 +1,18 @@
 /** biome-ignore-all lint/correctness/noInnerDeclarations: <explanation> */
 
-import { randNumber } from "@ngneat/falso";
-import { eq, sql } from "drizzle-orm";
-import { nanoid } from "nanoid";
-import * as schema from '../database/schema'
-import db, { type VipLevel } from '../database/index'
-import { players, vipInfos } from '../database/schema'
+import { randNumber } from '@ngneat/falso';
+import { eq, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import * as schema from '../database/schema';
+import db, { type VipLevel } from '../database/index';
+import { players, vipInfos } from '../database/schema';
 
 const constRanks = [
   {
     id: 1,
     level: 1,
-    name: "Bronze",
-    icon: `/images/vip/bronze_rank.avif`,
+    name: 'Bronze',
+    icon: '/images/vip/bronze_rank.avif',
     depositExp: 1000,
     minXp: 5000,
     uprankAward: 100,
@@ -32,8 +32,8 @@ const constRanks = [
   {
     id: 2,
     level: 2,
-    name: "Silver",
-    icon: `/images/vip/silver_rank.avif`,
+    name: 'Silver',
+    icon: '/images/vip/silver_rank.avif',
     depositExp: 5000,
     hasVipLoungeAccess: false,
     isInvitationOnly: false,
@@ -53,9 +53,9 @@ const constRanks = [
   {
     level: 3,
     id: 3,
-    name: "Gold",
+    name: 'Gold',
     depositExp: 20000,
-    icon: `/images/vip/gold_rank.avif`,
+    icon: '/images/vip/gold_rank.avif',
     purchaseBonusCoinPct: 1,
     hasVipLoungeAccess: false,
     isInvitationOnly: false,
@@ -74,13 +74,13 @@ const constRanks = [
   {
     id: 4,
     level: 4,
-    name: "Platinum",
+    name: 'Platinum',
     purchaseBonusCoinPct: 1,
     hasVipLoungeAccess: false,
     isInvitationOnly: false,
     depositExp: 100000,
     hasConcierge: false,
-    icon: `/images/vip/platinum_rank.avif`,
+    icon: '/images/vip/platinum_rank.avif',
     wagerBonusCoinPct: 1,
     dailyBonusCoinPct: 1,
     hourlyBonusCoinPct: 1,
@@ -96,13 +96,13 @@ const constRanks = [
   {
     level: 5,
     id: 5,
-    name: "Diamond",
+    name: 'Diamond',
     depositExp: 500000,
     hasVipLoungeAccess: false,
     wagerBonusCoinPct: 1,
     isInvitationOnly: false,
     dailyBonusCoinPct: 1,
-    icon: `/images/vip/diamond_rank.avif`,
+    icon: '/images/vip/diamond_rank.avif',
     purchaseBonusCoinPct: 1,
     hasConcierge: false,
     hourlyBonusCoinPct: 1,
@@ -162,7 +162,7 @@ export function generateRandomVipInfo(userId: string)
 export async function seedVipLevels()
 {
   // const vipLevel = vipLevels
-  console.log("💎 Seeding VIP levels...");
+  console.log('💎 Seeding VIP levels...');
 
   // const savedRanks = await db
   //   .insert(vipRanks)
@@ -172,18 +172,18 @@ export async function seedVipLevels()
   const levels: any[] = [];
 
   // console.log("savedRanks ", savedRanks);
-    // await db.insert(schema.settings).values({ id: '1', updatedAt: new Date(), createdAt: new Date() })
+  // await db.insert(schema.settings).values({ id: '1', updatedAt: new Date(), createdAt: new Date() })
   const setting = await db.query.settings.findMany({ limit: 1 });
 
-  for (var n = 0; n <= 6; n++) {
+  for (let n = 0; n <= 6; n++) {
     const cr = constRanks[n];
     // console.log(cr);
     var r: any;
     if (cr) r = await db.insert(schema.vipRanks).values(cr).returning();
-    if (!r) throw new Error("Failed to insert VIP rank");
-    if (!r[0]) throw new Error("Failed to get inserted VIP rank ID");
+    if (!r) throw new Error('Failed to insert VIP rank');
+    if (!r[0]) throw new Error('Failed to get inserted VIP rank ID');
     // console.log(r);
-    for (var i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 10; i++) {
       const level = {
         parentId: r[0].id,
         minXpNeeded: 0, //         Int?     @default(0) @map("min_xp_needed")
@@ -202,9 +202,9 @@ export async function seedVipLevels()
     // await db.insert(vipLevels).values(levels);
   }
 
-  console.log("✅ VIP levels seeded.");
+  console.log('✅ VIP levels seeded.');
 
-  console.log("💎 Seeding VIP info for users...");
+  console.log('💎 Seeding VIP info for users...');
   // Get all users who don't have vipInfo yet
   const usersWithoutVipInfo = await db
     .select({ id: players.id })
@@ -223,7 +223,7 @@ export async function seedVipLevels()
     await db.insert(vipInfos).values(vipInfoRecords);
     console.log(`✅ VIP info created for ${vipInfoRecords.length} users`);
   } else {
-    console.log("ℹ️  All users already have VIP info");
+    console.log('ℹ️  All users already have VIP info');
   }
   for (const record of vipInfoRecords) {
     // const [userVipInfo] = await db.select().from(schema.vipInfos).where(eq(schema.vipInfos.userId, newUser.id))

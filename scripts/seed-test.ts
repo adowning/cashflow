@@ -1,11 +1,11 @@
-import db  from '@backend/database'
-import  * as schema from '@backend/database/schema'
-import { type BetRequest, type BetOutcome, processBetOutcome } from '@backend/services/bet-orchestration.service'
-import { rand, randAmount, randNumber, randPastDate } from "@ngneat/falso";
+import db  from '@backend/database';
+import  * as schema from '@backend/database/schema';
+import { type BetRequest, type BetOutcome, processBetOutcome } from '@backend/services/bet-orchestration.service';
+import { rand, randAmount, randNumber, randPastDate } from '@ngneat/falso';
 
 export async function seedGameSpins(operatorId: string)
 {
-  console.log("🔄 Seeding game sessions and spins...");
+  console.log('🔄 Seeding game sessions and spins...');
 
   const allAuthSessions = await db.query.sessions.findMany({ limit: 10 });
   const allGames = await db.query.games.findMany({
@@ -14,7 +14,7 @@ export async function seedGameSpins(operatorId: string)
 
   if (allAuthSessions.length === 0 || allGames.length === 0) {
     console.log(
-      "⚠️ Cannot seed game sessions without auth sessions and games. Skipping."
+      '⚠️ Cannot seed game sessions without auth sessions and games. Skipping.'
     );
     return;
   }
@@ -24,12 +24,12 @@ export async function seedGameSpins(operatorId: string)
     const sessionCount = randNumber({ min: 1, max: 5 });
     for (let i = 0; i < sessionCount; i++) {
       const createdAt = randPastDate({ years: 1 });
-      const g = rand(allGames) as any
+      const g = rand(allGames) as any;
       const sessionData: typeof schema.gameSessions.$inferInsert = {
         playerId: authSession.userId,
         authSessionId: authSession.id,
         gameId: g.id,
-        status: "ACTIVE",
+        status: 'ACTIVE',
         gameName: g.name,
         createdAt: createdAt,
         endAt: new Date(
@@ -44,7 +44,7 @@ export async function seedGameSpins(operatorId: string)
   }
 
   if (sessionsToInsert.length === 0) {
-    console.log("ℹ️ No new game sessions to seed.");
+    console.log('ℹ️ No new game sessions to seed.');
     return;
   }
 
@@ -68,13 +68,13 @@ export async function seedGameSpins(operatorId: string)
 
     for (let i = 0; i < spinCount; i++) {
       // const wagerAmount = randFloat({ min: 0.1, max: 5, fraction: 2 }) * 100
-      const wagerAmount = randAmount({ min: 1, max: 10, fraction: 2 }) * 100
+      const wagerAmount = randAmount({ min: 1, max: 10, fraction: 2 }) * 100;
       const grossWinAmount = rand([
         0,
         0,
         0,
         randAmount({ min: 10, max: 100, fraction: 2 })
-      ]) * 100
+      ]) * 100;
 
       spinsToInsert.push({
         playerName: user.playername,
@@ -125,15 +125,15 @@ export async function seedGameSpins(operatorId: string)
   //   processingTime: number;
   // }
   if (spinsToInsert.length > 0) {
-    for await (var spin of spinsToInsert) {
+    for await (const spin of spinsToInsert) {
       const br: BetRequest = {
         userId: spin.userId as string,
         gameId: spin.gameId as string,
         wagerAmount: spin.wagerAmount as number,
         operatorId: spin.operatorId as string,
         sessionId: spin.sessionId as string,
-      }
-      if (!spin.wagerAmount) throw new Error()
+      };
+      if (!spin.wagerAmount) throw new Error();
 
       const bo: BetOutcome = {
         userId: spin.userId as string,
@@ -147,14 +147,14 @@ export async function seedGameSpins(operatorId: string)
         ggrContribution: 5,
         success: true,
         processingTime: Date.now()
-      }
-      const pbo: BetOutcome = await processBetOutcome(br, bo)
-      console.log(pbo)
+      };
+      const pbo: BetOutcome = await processBetOutcome(br, bo);
+      console.log(pbo);
     }
     // await db.insert(gameSpins).values(spinsToInsert);
 
     console.log(`✅ Seeded ${spinsToInsert.length} game spins.`);
   } else {
-    console.log("ℹ️  No new game spins to seed.");
+    console.log('ℹ️  No new game spins to seed.');
   }
 }

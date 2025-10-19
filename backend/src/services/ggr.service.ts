@@ -1,6 +1,7 @@
-import db from '../database'
-import { affiliates, affiliateLogs } from '../database/schema'
-import { and, eq, gte, lte } from "drizzle-orm";
+import { nanoid } from 'nanoid';
+import db from '../database';
+import { affiliates, affiliateLogs, commissions } from '../database/schema';
+import { and, count, desc, eq, gte, lte } from 'drizzle-orm';
 
 /**
  * GGR and affiliate logging system for weekly commission calculations
@@ -108,23 +109,24 @@ async function logAffiliateContribution(
   // Create affiliate log entry for commission calculation
   // This would typically go into an affiliate_earnings or similar table
   console.log(`Affiliate contribution logged: Affiliate ${affiliate.playername}, GGR: ${ggrAmount}`);
-
+  const commissionrate = await getAffiliateCommissionRate(affiliateId);
   // In production, you'd insert into affiliate_logs or a dedicated earnings table
-  // await db.insert(affiliateLogs).values({
-  //   invitorId: affiliateId,
-  //   childId: contribution.userId,
-  //   referralCode: affiliate.referralCode,
-  //   currency: contribution.currency,
-  //   betAmount: contribution.wagerAmount,
-  //   commissionAmount: Math.floor(ggrAmount * (affiliate.commissionRate || 0.05)), // 5% default
-  //   // ... other fields
-  // });
+  await db.insert(affiliateLogs).values({
+    id: nanoid(),
+    invitorId: affiliateId,
+    childId: contribution.userId,
+    referralCode: affiliate.referralCode,
+    currency: contribution.currency,
+    betAmount: contribution.wagerAmount,
+    commissionAmount: Math.floor(ggrAmount * (commissionrate)), // 5% default
+    // ... other fields
+  });
 }
 
 /**
  * Calculate weekly GGR for affiliate commission
  */
-export async function calculateWeeklyGGR(
+export async function calculateWeeklyAffiliateCommision(
   affiliateId: string,
   weekStart?: Date
 ): Promise<WeeklyGGR | null>
@@ -247,7 +249,7 @@ export async function processWeeklyAffiliatePayouts(): Promise<{
     let totalPayoutAmount = 0;
 
     for (const affiliate of affiliates) {
-      const weeklyGGR = await calculateWeeklyGGR(affiliate.id, weekStart);
+      const weeklyGGR = await calculateWeeklyAffiliateCommision(affiliate.id, weekStart);
 
       if (weeklyGGR && weeklyGGR.commissionAmount > 0) {
         // Process payout (in production, this would credit affiliate's account)
@@ -256,6 +258,8 @@ export async function processWeeklyAffiliatePayouts(): Promise<{
         // Mark as paid out
         weeklyGGR.paidOut = true;
         weeklyGGR.payoutDate = new Date();
+
+
 
         payoutsProcessed++;
         totalPayoutAmount += weeklyGGR.commissionAmount;
@@ -421,9 +425,173 @@ export function calculateBetGGR(wagerAmount: number, winAmount: number): number
 /**
  * Get affiliate commission rate (should be configurable per affiliate)
  */
-export function getAffiliateCommissionRate(affiliateId?: string): number
-{
-  // In production, this would come from affiliate settings
-  // For now, using default rates based on affiliate tier
-  return 0.05; // 5% default
+/**
+ * Dynamically fetches commission rates from the database.
+ * @returns {Promise<number[]>} An array of commission rates for Tier 0, Tier 1, etc.
+ */
+async function getAffiliateCommissionRate(currentAffiliateId): Promise<number> {
+  // Fetch the first available setting and its related commission configuration.
+  const commissionSetting = await db.query.settings.findFirst({
+    with: {
+      commission: true,
+    },
+  });
+
+  if (!commissionSetting?.referralCommissionRate) {
+    console.error('⚠️ Commission rates are not configured in the database. No commissions will be processed.');
+    return 0;//[]; // Return an empty array if no settings are found
+  }
+
+  // The rates are stored as percentages (e.g., 30 for 30%), so divide by 100.
+  // The order determines the tier: master -> Tier 0, affiliate -> Tier 1, etc.
+  const rates = JSON.parse(commissionSetting.rates);
+
+  const commissionRates = [
+    rates[0].master ,
+    rates[1].affiliate ,
+    rates[2].subaffiliate ,
+  ];
+  try {
+    // const commissionRates = await getCommissionRates();
+    // if (commissionRates.length === 0) {
+    //     return; // Stop if no commission rates are configured
+    // }
+
+    // let currentAffiliateId: string | null = contribution.affiliateId;
+    let tier = 0;
+
+    // Traverse up the affiliate hierarchy as long as there is a parent and a defined rate for the tier
+    let commissionRate = 0;
+    while (currentAffiliateId && tier < commissionRates.length) {
+      const affiliate = await db.query.affiliates.findFirst({
+        where: eq(affiliates.id, currentAffiliateId),
+      });
+
+      if (!affiliate) {
+        break; // Stop if the affiliate chain is broken
+      }
+
+      commissionRate = commissionRates[tier];
+      // const commissionAmount = Math.floor(ggrAmount * commissionRate);
+
+      // if (commissionAmount > 0) {
+      //     await db.insert(affiliateLogs).values({
+      //         id: `log_${crypto.randomUUID()}`,
+      //         invitorId: affiliate.id,
+      //         childId: contribution.userId,
+      //         referralCode: affiliate.referralCode,
+      //         currency: contribution.currency,
+      //         betAmount: contribution.wagerAmount,
+      //         commissionAmount: commissionAmount,
+      //         commissionWager: ggrAmount,
+      //         tier: tier,
+      //         createdAt: new Date(),
+      //         updatedAt: new Date(),
+      //     });
+      // }
+
+      // // Move to the parent affiliate for the next tier
+      // currentAffiliateId = affiliate.parentId;
+      tier++;
+    }
+    return commissionRate;
+  } catch (error) {
+    console.error('Failed to process affiliate commissions:', error);
+    return 0;
+  }
 }
+
+
+export const getReferralCodes = async (userId: string) =>
+{
+  return await db
+    .select({
+      id: referralCodes.id,
+      code: referralCodes.code,
+      name: referralCodes.name,
+      commissionRate: referralCodes.commissionRate,
+      userId: referralCodes.userId,
+      createdAt: referralCodes.createdAt,
+      updatedAt: referralCodes.updatedAt,
+    })
+    .from(referralCodes)
+    .where(eq(referralCodes.userId, userId))
+    .leftJoin(users, eq(referralCodes.code, users.inviteCode))
+    .groupBy(referralCodes.id)
+    .orderBy(desc(referralCodes.createdAt))
+    .then((results) =>
+    {
+      return results.map((result) => ({
+        ...result,
+        referralCount: 0, // We'll compute this dynamically since user.inviteCode might not be indexed properly
+      }));
+    });
+};
+
+export const createReferralCode = async (data: {
+  name: string;
+  code: string;
+  userId: string;
+  commissionRate: number;
+}) =>
+{
+  const result = await db
+    .insert(referralCodes)
+    .values({
+      id: nanoid(),
+      name: data.name,
+      code: data.code,
+      userId: data.userId,
+      commissionRate: data.commissionRate,
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return result[0];
+};
+
+export const getReferralCodeById = async (id: string) =>
+{
+  return await db.query.referralCodes.findFirst({
+    where: eq(referralCodes.id, id),
+  });
+};
+
+export const getReferralCodeByCode = async (code: string) =>
+{
+  return await db.query.referralCodes.findFirst({
+    where: eq(referralCodes.code, code),
+  });
+};
+
+export const deleteReferralCodeById = async (id: string) =>
+{
+  const result = await db
+    .delete(referralCodes)
+    .where(eq(referralCodes.id, id))
+    .returning();
+  return result.length > 0;
+};
+
+export const getReferralCodesCount = async (userId: string) =>
+{
+  const result = await db
+    .select({ value: count() })
+    .from(referralCodes)
+    .where(eq(referralCodes.userId, userId));
+  return result[0]?.value || 0;
+};
+
+// Helper function to get user by invitorId (used for friend count)
+export const getUserByInvitorId = async (invitorId: string) =>
+{
+  return await db.query.user.findMany({
+    where: eq(users.invitorId, invitorId),
+  });
+};
+
+export const getAffiliateByReferralCode = async (referralCode: string) => {
+  return await db.query.affiliates.findFirst({
+    where: eq(affiliates.referralCode, referralCode),
+  });
+};

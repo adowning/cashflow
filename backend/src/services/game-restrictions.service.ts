@@ -2,10 +2,10 @@
 /** biome-ignore-all lint/complexity/useOptionalChain: <> */
 
 
-import db from '../database'
-import type { Games, Bonus } from '../database/interfaces'
-import { games, bonuses, players,  } from '../database/schema'
-import { and, eq, } from "drizzle-orm";
+import db from '../database';
+import type { Games, Bonus } from '../database/interfaces';
+import { games, bonuses, players,  } from '../database/schema';
+import { and, eq, } from 'drizzle-orm';
 
 /**
  * Game restriction logic for bonus usage (admin-configurable per game)

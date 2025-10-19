@@ -1,28 +1,28 @@
-import { sql } from "drizzle-orm";
-import db from "../database/index";
+import { sql } from 'drizzle-orm';
+import db from '../database/index';
 
 const tableNames = [
-  "vip_ranks",
-  "vip_levels",
-  "vip_info",
-  "session",
-  "deposits",
-  "game_sessions",
+  'vip_ranks',
+  'vip_levels',
+  'vip_info',
+  'session',
+  'deposits',
+  'game_sessions',
   // "game_spins",
-  "balances",
-  "games",
-  "jackpot_contributions",
-  "jackpot_wins",
-  "jackpots",
-  "operators",
-  "products",
-  "transactions",
-  "players",
-  "vip_info",
+  'balances',
+  'games',
+  'jackpot_contributions',
+  'jackpot_wins',
+  'jackpots',
+  'operators',
+  'products',
+  'transactions',
+  'players',
+  'vip_info',
   // "vip_level_up_history",
-  "wallets",
-  "withdrawals",
-  "affiliates",
+  'wallets',
+  'withdrawals',
+  'affiliates',
   // "conversations",
   // "app_versions",
   // "messages",
@@ -75,15 +75,15 @@ const tableNames = [
 
 export async function resetDatabase()
 {
-  console.log("🗑️  Resetting database...");
+  console.log('🗑️  Resetting database...');
 
-  const truncateQuery = `TRUNCATE TABLE ${tableNames.map((name) => `"${name}"`).join(", ")} RESTART IDENTITY CASCADE;`;
+  const truncateQuery = `TRUNCATE TABLE ${tableNames.map((name) => `"${name}"`).join(', ')} RESTART IDENTITY CASCADE;`;
 
   try {
     await db.execute(sql.raw(truncateQuery));
-    console.log("✅ Database reset successfully.");
+    console.log('✅ Database reset successfully.');
   } catch (error) {
-    console.error("❌ Error resetting database:", error);
+    console.error('❌ Error resetting database:', error);
     throw error;
   }
 }

@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db from '../database'
-import { balances } from '../database/schema'
-import { eq } from 'drizzle-orm'
+import db from '../database';
+import { balances } from '../database/schema';
+import { eq } from 'drizzle-orm';
 
 
 /**
@@ -39,7 +39,7 @@ export interface WalletBalance
 export async function getWalletBalance(walletId: string): Promise<WalletBalance | null> {
   const balance = await db.query.balances.findFirst({
     where: eq(balances.id, walletId),
-  })
+  });
 
   if (!balance) {
     return {
@@ -47,7 +47,7 @@ export async function getWalletBalance(walletId: string): Promise<WalletBalance 
       realBalance: 0,
       bonusBalance: 0,
       totalBalance: 0,
-    }
+    };
   }
 
   return {
@@ -55,7 +55,7 @@ export async function getWalletBalance(walletId: string): Promise<WalletBalance 
     realBalance: Number(balance.amount),
     bonusBalance: Number(balance.bonus),
     totalBalance: Number(balance.amount) + Number(balance.bonus),
-  }
+  };
 }
 
 /**
@@ -66,20 +66,20 @@ export async function checkWalletBalance(
   walletId: string,
   betAmount: number,
 ): Promise<{ sufficient: boolean, balanceType: 'real' | 'bonus', availableAmount: number }> {
-  const walletBalance = await getWalletBalance(walletId)
+  const walletBalance = await getWalletBalance(walletId);
 
   if (!walletBalance) {
-    return { sufficient: false, balanceType: 'real', availableAmount: 0 }
+    return { sufficient: false, balanceType: 'real', availableAmount: 0 };
   }
 
   // Check real balance first (preferred)
   if (walletBalance.realBalance >= betAmount) {
-    return { sufficient: true, balanceType: 'real', availableAmount: walletBalance.realBalance }
+    return { sufficient: true, balanceType: 'real', availableAmount: walletBalance.realBalance };
   }
 
   // Check bonus balance as fallback
   if (walletBalance.bonusBalance >= betAmount) {
-    return { sufficient: true, balanceType: 'bonus', availableAmount: walletBalance.bonusBalance }
+    return { sufficient: true, balanceType: 'bonus', availableAmount: walletBalance.bonusBalance };
   }
 
   // Insufficient total balance
@@ -87,7 +87,7 @@ export async function checkWalletBalance(
     sufficient: false,
     balanceType: 'real', // Default to real when insufficient
     availableAmount: walletBalance.totalBalance,
-  }
+  };
 }
 
 /**
@@ -104,28 +104,28 @@ export async function debitFromWallet(
       // Get current balance
       const currentBalance = await tx.query.balances.findFirst({
         where: eq(balances.id, walletId),
-      })
+      });
 
       if (!currentBalance) {
-        throw new Error(`Wallet ${walletId} not found`)
+        throw new Error(`Wallet ${walletId} not found`);
       }
 
-      let newBalance: number
-      let updateField: any
+      let newBalance: number;
+      let updateField: any;
 
       if (balanceType === 'real') {
         if (Number(currentBalance.amount) < amount) {
-          throw new Error('Insufficient real balance')
+          throw new Error('Insufficient real balance');
         }
-        newBalance = Number(currentBalance.amount) - amount
-        updateField = { amount: newBalance }
+        newBalance = Number(currentBalance.amount) - amount;
+        updateField = { amount: newBalance };
       }
       else {
         if (Number(currentBalance.bonus) < amount) {
-          throw new Error('Insufficient bonus balance')
+          throw new Error('Insufficient bonus balance');
         }
-        newBalance = Number(currentBalance.bonus) - amount
-        updateField = { bonus: newBalance }
+        newBalance = Number(currentBalance.bonus) - amount;
+        updateField = { bonus: newBalance };
       }
 
       // Update balance
@@ -135,20 +135,20 @@ export async function debitFromWallet(
           ...updateField,
           updatedAt: new Date().toISOString(),
         })
-        .where(eq(balances.id, walletId))
+        .where(eq(balances.id, walletId));
 
-      return { success: true, newBalance }
-    })
+      return { success: true, newBalance };
+    });
 
-    return result
+    return result;
   }
   catch (error) {
-    console.error('Debit operation failed:', error)
+    console.error('Debit operation failed:', error);
     return {
       success: false,
       newBalance: 0,
       error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    };
   }
 }
 
@@ -164,47 +164,48 @@ export async function creditToWallet(
     // Get current balance outside transaction (better performance and typing)
     const currentBalance = await db.query.balances.findFirst({
       where: eq(balances.id, walletId),
-    })
+    });
 
     if (!currentBalance) {
-      throw new Error(`Wallet ${walletId} not found`)
+      throw new Error(`Wallet ${walletId} not found`);
     }
 
     // Use transaction only for the write operation
     const result = await db.transaction(async (tx) => {
-      let newBalance: number
-      let updateField: any
+      let newBalance: number;
+      let updateField: any;
 
       if (balanceType === 'real') {
-        newBalance = Number(currentBalance.amount) + amount
-        updateField = { amount: newBalance }
+        newBalance = Number(currentBalance.amount) + amount;
+        updateField = { amount: newBalance };
       }
       else {
-        newBalance = Number(currentBalance.bonus) + amount
-        updateField = { bonus: newBalance }
+        newBalance = Number(currentBalance.bonus) + amount;
+        updateField = { bonus: newBalance };
       }
-
+      const change = currentBalance.amount - newBalance;
+      console.log(change);
       // Update balance atomically
       await tx
         .update(balances)
         .set({
           ...updateField,
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
         })
-        .where(eq(balances.id, walletId))
+        .where(eq(balances.id, walletId));
 
-      return { success: true, newBalance }
-    })
+      return { success: true, newBalance };
+    });
 
-    return result
+    return result;
   }
   catch (error) {
-    console.error('Credit operation failed:', error)
+    console.error('Credit operation failed:', error);
     return {
       success: false,
       newBalance: 0,
       error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    };
   }
 }
 
@@ -214,14 +215,14 @@ export async function creditToWallet(
 export async function getUserWallets(userId: string): Promise<WalletBalance[]> {
   const userBalances = await db.query.balances.findMany({
     where: eq(balances.playerId, userId),
-  })
+  });
 
   return userBalances.map(balance => ({
     walletId: balance.id,
     realBalance: Number(balance.amount),
     bonusBalance: Number(balance.bonus),
     totalBalance: Number(balance.amount) + Number(balance.bonus),
-  }))
+  }));
 }
 
 /**
@@ -231,12 +232,12 @@ export async function setActiveWallet(): Promise<boolean> {
   try {
     // Note: users table doesn't have activeWalletId field in current schema
     // This function may need to be updated based on actual schema requirements
-    console.warn('setActiveWallet called but activeWalletId field not found in users table')
-    return false
+    console.warn('setActiveWallet called but activeWalletId field not found in users table');
+    return false;
   }
   catch (error) {
-    console.error('Failed to set active wallet:', error)
-    return false
+    console.error('Failed to set active wallet:', error);
+    return false;
   }
 }
 
@@ -249,41 +250,41 @@ export async function debitFromwallets(
   amount: number,
 ): Promise<number> {
   // Get user's active wallet
-  const userWallets = await getUserWallets(userId)
-  const activeWallet = userWallets[0]
+  const userWallets = await getUserWallets(userId);
+  const activeWallet = userWallets[0];
 
   if (activeWallet) {
-    console.log(`Active Wallet ID: ${activeWallet.walletId}`)
+    console.log(`Active Wallet ID: ${activeWallet.walletId}`);
   }
   else {
-    throw new Error('no active wallet')
+    throw new Error('no active wallet');
   }
-  if (!activeWallet) return 0
+  if (!activeWallet) return 0;
 
   if (!activeWallet) {
-    throw new Error(`User ${userId} wallet not found`)
+    throw new Error(`User ${userId} wallet not found`);
   }
 
-  const walletBalance = activeWallet
+  const walletBalance = activeWallet;
 
   // Determine balance type (simplified for Nolimit compatibility)
-  const balanceCheck = await checkWalletBalance(walletBalance.walletId, amount)
+  const balanceCheck = await checkWalletBalance(walletBalance.walletId, amount);
 
   if (!balanceCheck.sufficient) {
-    throw new Error('Insufficient balance')
+    throw new Error('Insufficient balance');
   }
 
   const debitResult = await debitFromWallet(
     walletBalance.walletId,
     amount,
     balanceCheck.balanceType,
-  )
+  );
 
   if (!debitResult.success) {
-    throw new Error(debitResult.error || 'Debit failed')
+    throw new Error(debitResult.error || 'Debit failed');
   }
 
-  return debitResult.newBalance
+  return debitResult.newBalance;
 }
 
 export async function creditTowallets(
@@ -291,25 +292,25 @@ export async function creditTowallets(
   amount: number,
 ): Promise<number> {
   // Get user's active wallet
-  const userWallets = await getUserWallets(userId)
-  const activeWallet = userWallets[0]
+  const userWallets = await getUserWallets(userId);
+  const activeWallet = userWallets[0];
 
   if (!activeWallet) {
-    throw new Error(`User ${userId} wallet not found`)
+    throw new Error(`User ${userId} wallet not found`);
   }
 
-  const walletBalance = activeWallet
+  const walletBalance = activeWallet;
 
   // Credit to real balance for wins (simplified for Nolimit compatibility)
   const creditResult = await creditToWallet(
     walletBalance.walletId,
     amount,
     'real',
-  )
+  );
 
   if (!creditResult.success) {
-    throw new Error(creditResult.error || 'Credit failed')
+    throw new Error(creditResult.error || 'Credit failed');
   }
 
-  return creditResult.newBalance
+  return creditResult.newBalance;
 }

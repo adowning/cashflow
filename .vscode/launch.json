@@ -14,6 +14,16 @@
             "stopOnEntry": false,
             "watchMode": false
         },
+            {
+            "type": "bun",
+            "internalConsoleOptions": "neverOpen",
+            "request": "launch",
+            "name": "Debug Dev",
+            "program": "${workspaceFolder}/backend/src/main.ts",
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false,
+            "watchMode": false
+        },
         {
             "type": "bun",
             "internalConsoleOptions": "neverOpen",

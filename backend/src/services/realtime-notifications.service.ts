@@ -1,5 +1,5 @@
-import { getVIPInfo } from "./vip.service";
-import { getWageringProgress } from "./wagering.service";
+import { getVIPInfo } from './vip.service';
+import { getWageringProgress } from './wagering.service';
 
 /**
  * Realtime notification system for WebSocket updates

@@ -1,12 +1,12 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import  db from '@backend/database'
-import { withdrawals, wallets } from '../../database/schema'
-import { getUserWallets } from '../wallet.service'
-import { eq,  SQL, sql } from 'drizzle-orm'
-import { notifyError } from '../realtime-notifications.service.js'
-import { canUserWithdraw } from '../wagering.service.js'
-import { debitFromWallet } from '../wallet.service.js'
+import  db from '@backend/database';
+import { withdrawals, wallets } from '../../database/schema';
+import { getUserWallets } from '../wallet.service';
+import { eq,  SQL, sql } from 'drizzle-orm';
+import { notifyError } from '../realtime-notifications.service.js';
+import { canUserWithdraw } from '../wagering.service.js';
+import { debitFromWallet } from '../wallet.service.js';
 
 /**
  * Enhanced withdrawal service implementing PRD requirements
@@ -28,9 +28,9 @@ export const PayoutMethodValues = {
   CASHAPP: 'CASHAPP',
   CRYPTO: 'CRYPTO',
   CHECK: 'CHECK'
-} as const
+} as const;
 
-export type PayoutMethod = typeof PayoutMethodValues[keyof typeof PayoutMethodValues]
+export type PayoutMethod = typeof PayoutMethodValues[keyof typeof PayoutMethodValues];
 
 export interface WithdrawalRequest
 {
@@ -82,34 +82,34 @@ export async function requestWithdrawal(request: WithdrawalRequest): Promise<Wit
 {
   try {
     // Validate user exists and has active wallet
-    const userWallets = await getUserWallets(request.userId)
+    const userWallets = await getUserWallets(request.userId);
     if (!userWallets || userWallets.length === 0) {
       return {
         success: false,
         status: WithdrawalStatus.FAILED,
         error: 'User wallet not found'
-      }
+      };
     }
 
-    const user = userWallets[0]
+    const user = userWallets[0];
 
-    const walletBalance = user
+    const walletBalance = user;
     if (!walletBalance || !walletBalance.walletId) {
       return {
         success: false,
         status: WithdrawalStatus.FAILED,
         error: 'Wallet balance not found'
-      }
+      };
     }
 
     // Check if user can withdraw (wagering requirements met)
-    const withdrawalEligibility = await canUserWithdraw(request.userId)
+    const withdrawalEligibility = await canUserWithdraw(request.userId);
 
     if (!withdrawalEligibility.canWithdraw) {
-      const errorMessage = 'Withdrawal not allowed. Please complete bonus wagering requirements first.'
+      const errorMessage = 'Withdrawal not allowed. Please complete bonus wagering requirements first.';
 
       // Send error notification to user
-      await notifyError(request.userId, errorMessage)
+      await notifyError(request.userId, errorMessage);
 
       return {
         success: false,
@@ -118,28 +118,28 @@ export async function requestWithdrawal(request: WithdrawalRequest): Promise<Wit
         validationErrors: withdrawalEligibility.blockingRequirements.map((req: { id: any; requiredWagering: number; currentWagering: number }) =>
           `Bonus ${req.id}: ${req.requiredWagering - req.currentWagering} more wagering needed`
         )
-      }
+      };
     }
 
     // Validate withdrawal amount
-    const currentBalance = Number(walletBalance.realBalance) + Number(walletBalance.bonusBalance)
+    const currentBalance = Number(walletBalance.realBalance) + Number(walletBalance.bonusBalance);
     if (request.amount > currentBalance) {
       return {
         success: false,
         status: WithdrawalStatus.FAILED,
         error: 'Insufficient balance for withdrawal'
-      }
+      };
     }
 
     // Validate payout details based on method
-    const validationErrors = await validatePayoutDetails(request.payoutMethod, request.payoutDetails)
+    const validationErrors = await validatePayoutDetails(request.payoutMethod, request.payoutDetails);
     if (validationErrors.length > 0) {
       return {
         success: false,
         status: WithdrawalStatus.FAILED,
         error: 'Invalid payout details',
         validationErrors
-      }
+      };
     }
 
     // Create withdrawal record
@@ -156,35 +156,35 @@ export async function requestWithdrawal(request: WithdrawalRequest): Promise<Wit
           payoutDetails: request.payoutDetails,
           requestedAt: new Date().toISOString()
         }))
-      }).returning({ id: withdrawals.id })
+      }).returning({ id: withdrawals.id });
 
       // Debit from wallet (hold funds)
       const debitResult = await debitFromWallet(
         walletBalance.walletId,
         request.amount,
         'real' // Debit from real balance first
-      )
+      );
 
       if (!debitResult.success) {
-        throw new Error(`Failed to debit wallet: ${debitResult.error}`)
+        throw new Error(`Failed to debit wallet: ${debitResult.error}`);
       }
-      if (!withdrawal[0]) throw new Error('no withdrawal')
-      return withdrawal[0].id
-    })
+      if (!withdrawal[0]) throw new Error('no withdrawal');
+      return withdrawal[0].id;
+    });
 
     return {
       success: true,
       withdrawalId,
       status: WithdrawalStatus.PENDING
-    }
+    };
 
   } catch (error) {
-    console.error('Withdrawal request failed:', error)
+    console.error('Withdrawal request failed:', error);
     return {
       success: false,
       status: WithdrawalStatus.FAILED,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -204,33 +204,33 @@ export async function processWithdrawalAction(action: AdminWithdrawalAction): Pr
       // Get withdrawal details
       const withdrawal = await tx.query.withdrawals.findFirst({
         where: eq(withdrawals.id, action.withdrawalId)
-      })
+      });
 
       if (!withdrawal) {
-        throw new Error('Withdrawal not found')
+        throw new Error('Withdrawal not found');
       }
 
-      let newStatus: WithdrawalStatus
-      let shouldRefund = false
+      let newStatus: WithdrawalStatus;
+      let shouldRefund = false;
 
       switch (action.action) {
         case 'approve':
-          newStatus = WithdrawalStatus.PROCESSING
-          break
+          newStatus = WithdrawalStatus.PROCESSING;
+          break;
         case 'reject':
-          newStatus = WithdrawalStatus.REJECTED
-          shouldRefund = true
-          break
+          newStatus = WithdrawalStatus.REJECTED;
+          shouldRefund = true;
+          break;
         case 'cancel':
-          newStatus = WithdrawalStatus.CANCELLED
-          shouldRefund = true
-          break
+          newStatus = WithdrawalStatus.CANCELLED;
+          shouldRefund = true;
+          break;
         default:
-          throw new Error('Invalid action')
+          throw new Error('Invalid action');
       }
 
       // Update withdrawal status
-      const existingMetadata = withdrawal.metadata ? JSON.parse(withdrawal.metadata.toString()) : {}
+      const existingMetadata = withdrawal.metadata ? JSON.parse(withdrawal.metadata.toString()) : {};
       await tx.update(withdrawals)
         .set({
           status: newStatus,
@@ -246,20 +246,20 @@ export async function processWithdrawalAction(action: AdminWithdrawalAction): Pr
             }
           }))
         })
-        .where(eq(withdrawals.id, action.withdrawalId))
+        .where(eq(withdrawals.id, action.withdrawalId));
 
       // Refund to wallet if rejected/cancelled
       if (shouldRefund) {
-        const userWallets = await getUserWallets(withdrawal.playerId!)
+        const userWallets = await getUserWallets(withdrawal.playerId!);
         if (userWallets && userWallets.length > 0) {
-          const user = userWallets[0]
+          const user = userWallets[0];
           if (user && user.walletId) {
             await tx.update(wallets)
               .set({
                 balance: sql`${wallets.balance} + ${withdrawal.amount}`,
                 updatedAt: new Date()
               })
-              .where(eq(wallets.id, user.walletId))
+              .where(eq(wallets.id, user.walletId));
           }
         }
       }
@@ -268,19 +268,19 @@ export async function processWithdrawalAction(action: AdminWithdrawalAction): Pr
         success: true,
         withdrawalId: action.withdrawalId,
         newStatus
-      }
-    })
+      };
+    });
 
-    return result
+    return result;
 
   } catch (error) {
-    console.error('Withdrawal action processing failed:', error)
+    console.error('Withdrawal action processing failed:', error);
     return {
       success: false,
       withdrawalId: action.withdrawalId,
       newStatus: WithdrawalStatus.FAILED,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -299,13 +299,13 @@ export async function completeWithdrawal(
     await db.transaction(async (tx) => {
       const withdrawal = await tx.query.withdrawals.findFirst({
         where: eq(withdrawals.id, withdrawalId)
-      })
+      });
 
       if (!withdrawal) {
-        throw new Error('Withdrawal not found')
+        throw new Error('Withdrawal not found');
       }
 
-      const existingMetadata = withdrawal.metadata ? JSON.parse(withdrawal.metadata.toString()) : {}
+      const existingMetadata = withdrawal.metadata ? JSON.parse(withdrawal.metadata.toString()) : {};
       await tx.update(withdrawals)
         .set({
           status: WithdrawalStatus.COMPLETED,
@@ -316,17 +316,17 @@ export async function completeWithdrawal(
             externalTransactionId
           }))
         })
-        .where(eq(withdrawals.id, withdrawalId))
-    })
+        .where(eq(withdrawals.id, withdrawalId));
+    });
 
-    return { success: true }
+    return { success: true };
 
   } catch (error) {
-    console.error('Withdrawal completion failed:', error)
+    console.error('Withdrawal completion failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -338,39 +338,39 @@ async function validatePayoutDetails(
   details: WithdrawalRequest['payoutDetails']
 ): Promise<string[]>
 {
-  const errors: string[] = []
+  const errors: string[] = [];
 
   switch (method) {
     case PayoutMethodValues.BANK_TRANSFER:
       if (!details.accountNumber || details.accountNumber.length < 8) {
-        errors.push('Valid account number is required')
+        errors.push('Valid account number is required');
       }
       if (!details.routingNumber || details.routingNumber.length !== 9) {
-        errors.push('Valid routing number is required')
+        errors.push('Valid routing number is required');
       }
-      break
+      break;
 
     case PayoutMethodValues.CASHAPP:
       if (!details.cashappTag || !details.cashappTag.startsWith('$')) {
-        errors.push('Valid CashApp tag is required (must start with $)')
+        errors.push('Valid CashApp tag is required (must start with $)');
       }
-      break
+      break;
 
     case PayoutMethodValues.CRYPTO:
       if (!details.cryptoAddress || details.cryptoAddress.length < 20) {
-        errors.push('Valid crypto address is required')
+        errors.push('Valid crypto address is required');
       }
       if (!details.walletType) {
-        errors.push('Wallet type is required for crypto withdrawals')
+        errors.push('Wallet type is required for crypto withdrawals');
       }
-      break
+      break;
 
     case PayoutMethodValues.CHECK:
       // Check method might not need additional validation
-      break
+      break;
   }
 
-  return errors
+  return errors;
 }
 
 /**
@@ -385,25 +385,25 @@ export async function getWithdrawalStatus(withdrawalId: string): Promise<{
   try {
     const withdrawal = await db.query.withdrawals.findFirst({
       where: eq(withdrawals.id, withdrawalId)
-    })
+    });
 
     if (!withdrawal) {
       return {
         status: WithdrawalStatus.FAILED,
         error: 'Withdrawal not found'
-      }
+      };
     }
 
     return {
       withdrawal,
       status: withdrawal.status as WithdrawalStatus
-    }
+    };
   } catch (error) {
-    console.error('Failed to get withdrawal status:', error)
+    console.error('Failed to get withdrawal status:', error);
     return {
       status: WithdrawalStatus.FAILED,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -426,25 +426,25 @@ export async function getUserWithdrawalHistory(
       orderBy: [sql`${withdrawals.createdAt} DESC`],
       limit,
       offset
-    })
+    });
 
     const total = await db
       .select({ count: sql<number>`count(*)` })
       .from(withdrawals)
-      .where(eq(withdrawals.playerId, userId))
+      .where(eq(withdrawals.playerId, userId));
 
-    if (!total[0]) throw new Error('no total')
+    if (!total[0]) throw new Error('no total');
     return {
       withdrawals: withdrawalsList,
       total: total[0].count
-    }
+    };
   } catch (error) {
-    console.error('Failed to get withdrawal history:', error)
+    console.error('Failed to get withdrawal history:', error);
     return {
       withdrawals: [],
       total: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -466,27 +466,27 @@ export async function getPendingWithdrawals(
       orderBy: [sql`${withdrawals.createdAt} ASC`], // Oldest first for FIFO processing
       limit,
       offset
-    })
+    });
 
     const total = await db
       .select({ count: sql<number>`count(*)` })
       .from(withdrawals)
-      .where(eq(withdrawals.status, WithdrawalStatus.PENDING))
+      .where(eq(withdrawals.status, WithdrawalStatus.PENDING));
 
-    if (!total[0]) throw new Error('no total')
+    if (!total[0]) throw new Error('no total');
 
 
     return {
       withdrawals: pendingWithdrawals,
       total: total[0].count
-    }
+    };
   } catch (error) {
-    console.error('Failed to get pending withdrawals:', error)
+    console.error('Failed to get pending withdrawals:', error);
     return {
       withdrawals: [],
       total: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -507,7 +507,7 @@ export async function getWithdrawalStatistics(
 }>
 {
   try {
-    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const stats = await db
       .select({
@@ -518,13 +518,13 @@ export async function getWithdrawalStatistics(
       })
       .from(withdrawals)
       .where(sql`${withdrawals.createdAt} >= ${startDate.toISOString()}`)
-      .groupBy(withdrawals.status)
+      .groupBy(withdrawals.status);
 
-    const totalWithdrawals = stats.reduce((sum: any, stat: { count: any }) => sum + stat.count, 0)
-    const totalAmount = stats.reduce((sum: any, stat: { amount: any }) => sum + (stat.amount || 0), 0)
+    const totalWithdrawals = stats.reduce((sum: any, stat: { count: any }) => sum + stat.count, 0);
+    const totalAmount = stats.reduce((sum: any, stat: { amount: any }) => sum + (stat.amount || 0), 0);
 
-    const pendingStats = stats.find((s) => s.status === WithdrawalStatus.PENDING)
-    const completedStats = stats.find((s) => s.status === WithdrawalStatus.COMPLETED)
+    const pendingStats = stats.find((s) => s.status === WithdrawalStatus.PENDING);
+    const completedStats = stats.find((s) => s.status === WithdrawalStatus.COMPLETED);
 
     return {
       totalWithdrawals,
@@ -534,10 +534,10 @@ export async function getWithdrawalStatistics(
       completedWithdrawals: completedStats?.count || 0,
       completedAmount: completedStats?.amount || 0,
       averageProcessingTime: completedStats?.avgProcessingTime || 0
-    }
+    };
 
   } catch (error) {
-    console.error('Failed to get withdrawal statistics:', error)
+    console.error('Failed to get withdrawal statistics:', error);
     return {
       totalWithdrawals: 0,
       totalAmount: 0,
@@ -547,6 +547,6 @@ export async function getWithdrawalStatistics(
       completedAmount: 0,
       averageProcessingTime: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }

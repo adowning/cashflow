@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import { balances, playerBonuses, players, bonuses,  } from "@backend/database/schema";
-import db from '@backend/database'
+import { balances, playerBonuses, players, bonuses,  } from '@backend/database/schema';
+import db from '@backend/database';
 import { and, desc, eq, sql } from 'drizzle-orm';
 
 /**
@@ -56,40 +56,40 @@ export async function updateWageringProgress(
   try {
     const result = await db.transaction(async (tx) =>
     {
-      const completedRequirements: string[] = []
+      const completedRequirements: string[] = [];
 
       // Update deposit wagering (1x requirement for withdrawals)
       if (update.balanceType === 'real') {
-        const depositProgress = await updateDepositWagering(tx, update)
-        completedRequirements.push(...depositProgress.completedRequirements)
+        const depositProgress = await updateDepositWagering(tx, update);
+        completedRequirements.push(...depositProgress.completedRequirements);
       }
 
       // Update bonus wagering (if using bonus balance)
       if (update.balanceType === 'bonus') {
-        const bonusProgress = await updateBonusWagering(tx, update)
-        completedRequirements.push(...bonusProgress.completedRequirements)
+        const bonusProgress = await updateBonusWagering(tx, update);
+        completedRequirements.push(...bonusProgress.completedRequirements);
       }
 
       // Get updated progress summary
-      const newProgress = await getWageringProgress(update.userId)
+      const newProgress = await getWageringProgress(update.userId);
 
       return {
         success: true,
         completedRequirements,
         newProgress,
-      }
-    })
+      };
+    });
 
-    return result
+    return result;
   }
   catch (error) {
-    console.error('Wagering progress update failed:', error)
+    console.error('Wagering progress update failed:', error);
     return {
       success: false,
       completedRequirements: [],
       newProgress: await getWageringProgress(update.userId),
       error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    };
   }
 }
 
@@ -101,18 +101,22 @@ async function updateDepositWagering(
   update: WageringUpdate,
 ): Promise<{ completedRequirements: string[] }>
 {
-  const completedRequirements: string[] = []
+  const completedRequirements: string[] = [];
 
   // Get user's active wallet
   const user = await tx.query.players.findFirst({
     where: eq(players.id, update.userId),
     with: {
-      balances: true,
+      wallets: {
+        with: {
+          balances: true,
+        },
+      },
     },
-  })
+  });
 
   if (!user) {
-    throw new Error('User wallet not found')
+    throw new Error('User wallet not found');
   }
 
   // Get recent deposits that need 1x wagering
@@ -137,7 +141,7 @@ async function updateDepositWagering(
   //   // to track progress per deposit
   // }
 
-  return { completedRequirements }
+  return { completedRequirements };
 }
 
 /**
@@ -148,7 +152,7 @@ async function updateBonusWagering(
   update: WageringUpdate,
 ): Promise<{ completedRequirements: string[] }>
 {
-  const completedRequirements: string[] = []
+  const completedRequirements: string[] = [];
 
   // Get active bonuses ordered by creation date (FIFO)
   const activeBonuses = await tx.query.playerBonuses.findMany({
@@ -156,23 +160,26 @@ async function updateBonusWagering(
       eq(playerBonuses.playerId, update.userId),
       eq(playerBonuses.status, 'pending'),
     ),
-    orderBy: [desc(playerBonuses.createdAt)], // FIFO - oldest first
-  })
+    with: {
+      bonus: true, // Add this to load the bonus relation
+    },
+    orderBy: [playerBonuses.createdAt], // FIFO - oldest first (should be asc, not desc)
+  });
 
   for (const playerBonus of activeBonuses) {
-    const bonusAmount = Number(playerBonus.amount)
-    const currentWagered = Number(playerBonus.processAmount)
-    const goalAmount = Number(playerBonus.goalAmount)
+    const bonusAmount = Number(playerBonus.amount);
+    const currentWagered = Number(playerBonus.processAmount);
+    const goalAmount = Number(playerBonus.goalAmount);
 
     // Check if game is allowed for this bonus
-    const gameAllowed = await isGameAllowedForBonus(playerBonus.bonusId)
+    const gameAllowed = await isGameAllowedForBonus(playerBonus.bonusId);
     if (!gameAllowed) {
-      continue // Skip this bonus if game not allowed
+      continue; // Skip this bonus if game not allowed
     }
 
     // Update wagering progress
-    const newWagered = currentWagered + update.wagerAmount
-    const completed = newWagered >= goalAmount
+    const newWagered = currentWagered + update.wagerAmount;
+    const completed = newWagered >= goalAmount;
 
     // Update player bonus record
     await tx
@@ -180,28 +187,28 @@ async function updateBonusWagering(
       .set({
         processAmount: newWagered,
         status: completed ? 'completed' : 'pending',
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date(),
       })
-      .where(eq(playerBonuses.id, playerBonus.id))
+      .where(eq(playerBonuses.id, playerBonus.id));
 
     if (completed) {
-      completedRequirements.push(playerBonus.id)
+      completedRequirements.push(playerBonus.id);
 
       // Convert bonus to real balance
-      await convertBonusToRealBalance(tx, update.userId, bonusAmount)
+      await convertBonusToRealBalance(tx, update.userId, bonusAmount);
 
       // Mark bonus as completed
       await tx
         .update(playerBonuses)
         .set({
           status: 'completed',
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
         })
-        .where(eq(playerBonuses.id, playerBonus.id))
+        .where(eq(playerBonuses.id, playerBonus.id));
     }
   }
 
-  return { completedRequirements }
+  return { completedRequirements };
 }
 
 /**
@@ -216,19 +223,26 @@ async function convertBonusToRealBalance(
   // Get user's wallet
   const user = await tx.query.players.findFirst({
     where: eq(players.id, userId),
-  })
+    with: {
+      wallets: {
+        with: {
+          balances: true,
+        },
+      },
+    },
+  });
 
   if (!user) {
-    throw new Error('User wallet not found')
+    throw new Error('User wallet not found');
   }
 
   // Get user's wallet balance manually
   const walletBalance = await tx.query.balances.findFirst({
     where: eq(balances.playerId, userId),
-  })
+  });
 
   if (!walletBalance) {
-    throw new Error('User wallet not found')
+    throw new Error('User wallet not found');
   }
 
   // Convert bonus to real balance
@@ -237,9 +251,9 @@ async function convertBonusToRealBalance(
     .set({
       amount: sql`${balances.amount} + ${bonusAmount}`,
       bonus: sql`${balances.bonus} - ${bonusAmount}`,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
     })
-    .where(eq(balances.id, walletBalance.id))
+    .where(eq(balances.id, walletBalance.id));
 }
 
 /**
@@ -249,10 +263,10 @@ async function isGameAllowedForBonus(bonusId: string): Promise<boolean>
 {
   const _bonus = await db.query.bonuses.findFirst({
     where: eq(bonuses.id, bonusId),
-  })
+  });
 
   if (!_bonus) {
-    return false
+    return false;
   }
 
   // Check game restrictions
@@ -262,10 +276,10 @@ async function isGameAllowedForBonus(bonusId: string): Promise<boolean>
   if (_bonus.slot === false) {
     // Bonus doesn't allow slot games
     // You'd check if the game is a slot game here
-    return false
+    return false;
   }
 
-  return true
+  return true;
 }
 
 /**
@@ -274,7 +288,7 @@ async function isGameAllowedForBonus(bonusId: string): Promise<boolean>
 export async function getWageringProgress(userId: string): Promise<WageringProgress>
 {
   // Get deposit wagering requirements (simplified)
-  const depositRequirements: WageringRequirement[] = []
+  const depositRequirements: WageringRequirement[] = [];
 
   // Get bonus wagering requirements
   const activeBonuses = await db.query.playerBonuses.findMany({
@@ -282,14 +296,17 @@ export async function getWageringProgress(userId: string): Promise<WageringProgr
       eq(playerBonuses.playerId, userId),
       eq(playerBonuses.status, 'pending'),
     ),
-  })
+    with: {
+      bonus: true, // Add this to load the bonus relation
+    },
+  });
 
   const bonusRequirements: WageringRequirement[] = activeBonuses.map((pb) =>
   {
-    const amount = Number(pb.amount)
-    const requiredWagering = Number(pb.goalAmount)
-    const currentWagering = Number(pb.processAmount)
-    const progress = requiredWagering > 0 ? (currentWagering / requiredWagering) * 100 : 0
+    const amount = Number(pb.amount);
+    const requiredWagering = Number(pb.goalAmount);
+    const currentWagering = Number(pb.processAmount);
+    const progress = requiredWagering > 0 ? (currentWagering / requiredWagering) * 100 : 0;
 
     return {
       id: pb.id,
@@ -302,13 +319,13 @@ export async function getWageringProgress(userId: string): Promise<WageringProgr
       completed: currentWagering >= requiredWagering,
       expiryDate: (pb.bonus as any).expireDate ? new Date((pb.bonus as any).expireDate) : undefined,
       gameRestrictions: [], // Should be populated from bonus configuration
-    }
-  })
+    };
+  });
 
   // Calculate overall progress
-  const totalRequired = bonusRequirements.reduce((sum, req) => sum + req.requiredWagering, 0)
-  const totalWagered = bonusRequirements.reduce((sum, req) => sum + req.currentWagering, 0)
-  const overallProgress = totalRequired > 0 ? (totalWagered / totalRequired) * 100 : 0
+  const totalRequired = bonusRequirements.reduce((sum, req) => sum + req.requiredWagering, 0);
+  const totalWagered = bonusRequirements.reduce((sum, req) => sum + req.currentWagering, 0);
+  const overallProgress = totalRequired > 0 ? (totalWagered / totalRequired) * 100 : 0;
 
   return {
     depositRequirements,
@@ -316,7 +333,7 @@ export async function getWageringProgress(userId: string): Promise<WageringProgr
     overallProgress: Math.min(overallProgress, 100),
     totalRequired,
     totalWagered,
-  }
+  };
 }
 
 /**
@@ -328,17 +345,17 @@ export async function canUserWithdraw(userId: string): Promise<{
   reason?: string
 }>
 {
-  const progress = await getWageringProgress(userId)
+  const progress = await getWageringProgress(userId);
 
   // Check if any bonus requirements are incomplete
-  const incompleteBonuses = progress.bonusRequirements.filter(req => !req.completed)
+  const incompleteBonuses = progress.bonusRequirements.filter(req => !req.completed);
 
   if (incompleteBonuses.length > 0) {
     return {
       canWithdraw: false,
       blockingRequirements: incompleteBonuses,
       reason: 'Active bonus wagering requirements must be completed before withdrawal',
-    }
+    };
   }
 
   // Check deposit wagering requirements (simplified)
@@ -347,7 +364,7 @@ export async function canUserWithdraw(userId: string): Promise<{
   return {
     canWithdraw: true,
     blockingRequirements: [],
-  }
+  };
 }
 
 /**
@@ -357,16 +374,16 @@ export async function getBonusWageringDetails(bonusId: string): Promise<Wagering
 {
   const playerBonus = await db.query.playerBonuses.findFirst({
     where: eq(playerBonuses.id, bonusId),
-  })
+  });
 
   if (!playerBonus) {
-    return null
+    return null;
   }
 
-  const amount = Number(playerBonus.amount)
-  const requiredWagering = Number(playerBonus.goalAmount)
-  const currentWagering = Number(playerBonus.processAmount)
-  const progress = requiredWagering > 0 ? (currentWagering / requiredWagering) * 100 : 0
+  const amount = Number(playerBonus.amount);
+  const requiredWagering = Number(playerBonus.goalAmount);
+  const currentWagering = Number(playerBonus.processAmount);
+  const progress = requiredWagering > 0 ? (currentWagering / requiredWagering) * 100 : 0;
 
   return {
     id: playerBonus.id,
@@ -379,7 +396,7 @@ export async function getBonusWageringDetails(bonusId: string): Promise<Wagering
     completed: currentWagering >= requiredWagering,
     expiryDate: (playerBonus.bonus as any).expireDate ? new Date((playerBonus.bonus as any).expireDate) : undefined,
     gameRestrictions: [], // Should be populated from bonus configuration
-  }
+  };
 }
 
 /**
@@ -394,13 +411,13 @@ export async function getWithdrawalEligibility(userId: string): Promise<{
   }
 }>
 {
-  const progress = await getWageringProgress(userId)
+  const progress = await getWageringProgress(userId);
 
   const totalRemainingWagering
     = progress.bonusRequirements.reduce((sum, req) =>
     {
-      return sum + Math.max(0, req.requiredWagering - req.currentWagering)
-    }, 0)
+      return sum + Math.max(0, req.requiredWagering - req.currentWagering);
+    }, 0);
 
   return {
     eligible: totalRemainingWagering === 0,
@@ -409,5 +426,5 @@ export async function getWithdrawalEligibility(userId: string): Promise<{
       depositWagering: 0, // Simplified for now
       bonusWagering: totalRemainingWagering,
     },
-  }
+  };
 }

@@ -1,5 +1,5 @@
 import { users, sessions } from '@backend/database/schema';
-import { eq, inArray } from 'drizzle-orm';
+import {  inArray } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import db from '@backend/database';
@@ -16,8 +16,8 @@ export const seedAndLoginUsers = async () => {
 
     // --- Define Users to Create ---
     const staticUsers = [
-      { name: "system", password: "systemasdfasdf", email: "system@example.com" },
-      { name: "asdf", password: "asdfasdf", email: "asdf@example.com" }
+      { name: 'system', password: 'systemasdfasdf', email: 'system@example.com' },
+      { name: 'asdf', password: 'asdfasdf', email: 'asdf@example.com' }
     ];
 
     const TOTAL_DYNAMIC_USERS = 10;
@@ -53,7 +53,7 @@ export const seedAndLoginUsers = async () => {
 
     // --- Step 2: Create all new users ---
     console.log(chalk.yellow(`\n- Creating ${allUsersToProcess.length} new users...`));
-    const createdUsersWithPasswords = [];
+    const createdUsersWithPasswords: User[] = [];
 
     for (const user of allUsersToProcess) {
       const salt = await bcrypt.genSalt(10);

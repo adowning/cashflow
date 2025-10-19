@@ -1,0 +1,1 @@
+ALTER TABLE "deposits" RENAME TO "deposit";

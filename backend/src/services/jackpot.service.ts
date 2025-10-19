@@ -4,7 +4,7 @@
  * Admin-configurable rates and game group assignments
  */
 
-export type JackpotGroup = 'minor' | 'major' | 'mega';
+// export type JackpotGroup = 'minor' | 'major' | 'mega';
 
 export interface JackpotConfig
 {
@@ -172,10 +172,10 @@ class JackpotManager
    * Process jackpot contribution from a bet
    */
   contribute(gameId: string, wagerAmount: number):
-    {
-      contributions: Record<JackpotGroup, number>;
-      totalContribution: number;
-    }
+  {
+    contributions: Record<JackpotGroup, number>;
+    totalContribution: number;
+  }
   {
     // Determine which jackpot group(s) this game contributes to
     const gameJackpotGroups = this.getGameJackpotGroups(gameId);
@@ -339,12 +339,12 @@ class JackpotManager
    * Get statistics for all jackpot groups
    */
   getStatistics():
-    {
-      pools: Record<JackpotGroup, JackpotPool>;
-      totalContributions: number;
-      totalWins: number;
-      totalGamesContributing: number;
-    }
+  {
+    pools: Record<JackpotGroup, JackpotPool>;
+    totalContributions: number;
+    totalWins: number;
+    totalGamesContributing: number;
+  }
   {
     const pools = this.getAllPools();
     const totalContributions = Array.from(this.pools.values())

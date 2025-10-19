@@ -1,0 +1,1 @@
+ALTER TABLE "wallets" RENAME COLUMN "player_id" TO "user_id";

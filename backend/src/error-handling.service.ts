@@ -25,7 +25,7 @@ export async function handleBetError(
     source,
     context,
     timestamp: new Date().toISOString(),
-  })
+  });
 
   // In production, you might want to:
   // 1. Send error to monitoring service (Sentry, DataDog, etc.)

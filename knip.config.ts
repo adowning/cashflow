@@ -1,8 +1,8 @@
-import type { KnipConfig } from 'knip'
+import type { KnipConfig } from 'knip';
 
 Object.assign(import.meta.env, {
   DATABASE_URL: 'foo.db',
-})
+});
 
 export default {
   stylelint: false,
@@ -21,4 +21,4 @@ export default {
       ignoreDependencies: ['uno.css'],
     },
   },
-} satisfies KnipConfig
+} satisfies KnipConfig;

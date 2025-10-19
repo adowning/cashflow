@@ -1,13 +1,29 @@
 {
-  "extends": "@kevinmarrec/tsconfig",
   "compilerOptions": {
-    "paths": {
-      "@backend/*": ["./backend/src/*"],
-      "@frontend/*": ["./frontend/src/*"]
-    },
+    "target": "ESNext",
+    "jsx": "preserve",
+    "lib": ["ESNext"],
+    "moduleDetection": "force",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
     "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true,
     "erasableSyntaxOnly": false
   },
-  "exclude": ["**/dist/**"]
+  "exclude": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/*.config.*",
+    "**/*.cjs",
+    "**/*.mjs",
+    "**/*.js"
+  ]
 }

@@ -3,8 +3,8 @@
 import fs from 'fs';
 import path from 'path';
 import db from '../database/index';
-import * as schema from '../types';
-import { nanoid } from 'nanoid';
+import * as schema from '../database/schema';
+import type {Bonus} from '../database/interfaces';
 
 export async function seedBonuses() {
   console.log('Seeding bonuses...');
@@ -15,7 +15,7 @@ export async function seedBonuses() {
     const bonusesData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
     // Map and prepare bonus data
-    const bonusesToInsert = bonusesData.map((bonus: any) => {
+    const bonusesToInsert = bonusesData.map((bonus: Bonus) => {
       const expireDate = new Date(bonus.expireDate);
       const now = new Date();
 

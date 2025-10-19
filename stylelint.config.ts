@@ -1,1 +1,1 @@
-export { default } from '@kevinmarrec/stylelint-config'
+export { default } from '@kevinmarrec/stylelint-config';

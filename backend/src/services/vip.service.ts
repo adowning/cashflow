@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db from "../database";
+import db from '../database';
 import { players, } from '../database/schema';
 import type { User } from '../database/interfaces';
 import { eq } from 'drizzle-orm';
@@ -121,7 +121,7 @@ const DEFAULT_VIP_LEVELS: VIPLevel[] = [
       prioritySupport: true,
     },
   },
-]
+];
 
 /**
  * Calculate VIP points for a wager and win
@@ -132,18 +132,18 @@ export function calculateXpForWagerAndWins(
 ): PointsCalculation
 {
   // Base points: 1 point per $1 wagered
-  const basePoints = Math.floor(wagerAmount / 100)
+  const basePoints = Math.floor(wagerAmount / 100);
 
   // Bonus multiplier based on current VIP level
-  const vipMultiplier = 1// getVIPMultiplier(currentVIP?.currentLevel || 1)
+  const vipMultiplier = 1;// getVIPMultiplier(currentVIP?.currentLevel || 1)
 
   // Apply VIP level multiplier
-  const totalPoints = Math.floor(basePoints * vipMultiplier)
+  const totalPoints = Math.floor(basePoints * vipMultiplier);
 
   // Check for level up
-  const currentLevel = 1//currentVIP?.currentLevel || 1
-  const newTotalPoints = 0// (currentVIP?.totalPoints || 0) + totalPoints
-  const levelUp = checkLevelUp(currentLevel, newTotalPoints)
+  const currentLevel = 1;//currentVIP?.currentLevel || 1
+  const newTotalPoints = 0;// (currentVIP?.totalPoints || 0) + totalPoints
+  const levelUp = checkLevelUp(currentLevel, newTotalPoints);
 
   return {
     basePoints,
@@ -151,7 +151,7 @@ export function calculateXpForWagerAndWins(
     totalPoints,
     levelUp,
     newLevel: levelUp ? currentLevel + 1 : currentLevel,
-  }
+  };
 }
 
 /**
@@ -165,9 +165,9 @@ function getVIPMultiplier(level: number): number
     3: 1.5, // Gold
     4: 2.0, // Platinum
     5: 2.5, // Diamond
-  }
+  };
 
-  return multipliers[level] || 1.0
+  return multipliers[level] || 1.0;
 }
 
 /**
@@ -175,15 +175,15 @@ function getVIPMultiplier(level: number): number
  */
 function checkLevelUp(currentLevel: number, newTotalPoints: number): boolean
 {
-  const currentLevelConfig = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel)
+  const currentLevelConfig = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel);
   if (!currentLevelConfig)
-    return false
+    return false;
 
-  const nextLevel = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel + 1)
+  const nextLevel = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel + 1);
   if (!nextLevel)
-    return false
+    return false;
 
-  return newTotalPoints >= nextLevel.minPoints
+  return newTotalPoints >= nextLevel.minPoints;
 }
 
 /**
@@ -206,16 +206,23 @@ export async function addXpToUser(
       // Get current user data
       const user = await tx.query.players.findFirst({
         where: eq(players.id, userId),
-      }) as User | undefined
+        with: {
+          wallets: {
+            with: {
+              balances: true,
+            },
+          },
+        },
+      }) as User | undefined;
 
       if (!user) {
-        throw new Error('User not found')
+        throw new Error('User not found');
       }
 
       // For now, storing VIP points in a custom field
       // In production, you'd have a dedicated vip_progress table
-      const currentPoints = 0 // Placeholder - should come from user record
-      const newTotalPoints = currentPoints + pointsToAdd
+      const currentPoints = 0; // Placeholder - should come from user record
+      const newTotalPoints = currentPoints + pointsToAdd;
 
       // Update user points (placeholder - should update actual field)
       // await tx
@@ -227,37 +234,37 @@ export async function addXpToUser(
       //   .where(eq(players.id, userId));
 
       // Check for level up
-      const currentLevel = calculateVIPLevel(currentPoints)
-      const newLevel = calculateVIPLevel(newTotalPoints)
-      const levelUp = newLevel > currentLevel
+      const currentLevel = calculateVIPLevel(currentPoints);
+      const newLevel = calculateVIPLevel(newTotalPoints);
+      const levelUp = newLevel > currentLevel;
 
       if (levelUp) {
         // Handle level up benefits
-        await handleLevelUp(tx, userId, newLevel)
+        await handleLevelUp(tx, userId, newLevel);
       }
 
       return {
         success: true,
         levelUp,
         newLevel,
-      }
-    })
+      };
+    });
 
     // Get updated VIP info
-    const newVIPInfo = await getVIPInfo(userId)
+    const newVIPInfo = await getVIPInfo(userId);
 
     return {
       ...result,
       newVIPInfo,
-    }
+    };
   }
   catch (error) {
-    console.error('Add XP to user failed:', error)
+    console.error('Add XP to user failed:', error);
     return {
       success: false,
       levelUp: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    };
   }
 }
 
@@ -267,12 +274,12 @@ export async function addXpToUser(
 function calculateVIPLevel(totalPoints: number): number
 {
   for (let i = DEFAULT_VIP_LEVELS.length - 1; i >= 0; i--) {
-    const level = DEFAULT_VIP_LEVELS[i]!
+    const level = DEFAULT_VIP_LEVELS[i]!;
     if (totalPoints >= level.minPoints) {
-      return level.level
+      return level.level;
     }
   }
-  return 1 // Default to level 1
+  return 1; // Default to level 1
 }
 
 /**
@@ -280,22 +287,22 @@ function calculateVIPLevel(totalPoints: number): number
  */
 async function handleLevelUp(tx: unknown, userId: string, newLevel: number): Promise<void>
 {
-  const levelConfig = DEFAULT_VIP_LEVELS.find(l => l.level === newLevel)
+  const levelConfig = DEFAULT_VIP_LEVELS.find(l => l.level === newLevel);
   if (!levelConfig)
-    return
+    return;
 
   // Log level up (in production, this would trigger notifications)
-  console.log(`User ${userId} leveled up to ${levelConfig.name} (Level ${newLevel})`)
+  console.log(`User ${userId} leveled up to ${levelConfig.name} (Level ${newLevel})`);
 
   // Apply level up benefits
   if (levelConfig.benefits.cashback) {
     // Grant cashback bonus
-    await grantLevelUpCashback(tx, userId, levelConfig.benefits.cashback)
+    await grantLevelUpCashback(tx, userId, levelConfig.benefits.cashback);
   }
 
   if (levelConfig.benefits.freeSpins) {
     // Grant free spins
-    await grantLevelUpFreeSpins(tx, userId, levelConfig.benefits.freeSpins)
+    await grantLevelUpFreeSpins(tx, userId, levelConfig.benefits.freeSpins);
   }
 }
 
@@ -306,7 +313,7 @@ async function grantLevelUpCashback(_tx: unknown, userId: string, cashbackPercen
 {
   // This would create a cashback bonus record
   // Implementation depends on your cashback system
-  console.log(`Granting ${cashbackPercent}% cashback to user ${userId}`)
+  console.log(`Granting ${cashbackPercent}% cashback to user ${userId}`);
 }
 
 /**
@@ -316,7 +323,7 @@ async function grantLevelUpFreeSpins(_tx: unknown, userId: string, freeSpinsCoun
 {
   // This would create a free spins bonus record
   // Implementation depends on your free spins system
-  console.log(`Granting ${freeSpinsCount} free spins to user ${userId}`)
+  console.log(`Granting ${freeSpinsCount} free spins to user ${userId}`);
 }
 
 /**
@@ -326,27 +333,34 @@ export async function getVIPInfo(userId: string): Promise<VIPInfo | null>
 {
   const user = await db.query.players.findFirst({
     where: eq(players.id, userId),
-  }) as User | undefined
+    with: {
+      wallets: {
+        with: {
+          balances: true,
+        },
+      },
+    },
+  }) as User | undefined;
 
   if (!user) {
-    return null
+    return null;
   }
 
   // Get current points (placeholder - should come from user record or VIP table)
-  const totalPoints = 0 // Placeholder
-  const currentLevel = calculateVIPLevel(totalPoints)
-  const levelConfig = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel)
+  const totalPoints = 0; // Placeholder
+  const currentLevel = calculateVIPLevel(totalPoints);
+  const levelConfig = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel);
 
   if (!levelConfig) {
-    return null
+    return null;
   }
 
   // Calculate progress to next level
-  const nextLevel = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel + 1)
-  const pointsToNextLevel = nextLevel ? nextLevel.minPoints - totalPoints : 0
+  const nextLevel = DEFAULT_VIP_LEVELS.find(l => l.level === currentLevel + 1);
+  const pointsToNextLevel = nextLevel ? nextLevel.minPoints - totalPoints : 0;
   const progressToNextLevel = nextLevel && nextLevel.minPoints > 0
     ? ((totalPoints - levelConfig.minPoints) / (nextLevel.minPoints - levelConfig.minPoints)) * 100
-    : 100
+    : 100;
 
   return {
     userId,
@@ -356,7 +370,7 @@ export async function getVIPInfo(userId: string): Promise<VIPInfo | null>
     pointsToNextLevel,
     progressToNextLevel: Math.min(Math.max(progressToNextLevel, 0), 100),
     levelBenefits: levelConfig.benefits,
-  }
+  };
 }
 
 /**
@@ -367,14 +381,14 @@ export async function calculateCostSharing(
 ): Promise<CostSharingAllocation>
 {
   // Get user's activity across all operators (last 30 days)
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   // This would query actual betting activity per operator
   // For now, using a simplified approach
-  const operatorActivity = await getUserOperatorActivity()
+  const operatorActivity = await getUserOperatorActivity();
 
-  const totalActivity = Object.values(operatorActivity).reduce((sum, activity) => sum + activity, 0)
+  const totalActivity = Object.values(operatorActivity).reduce((sum, activity) => sum + activity, 0);
 
   if (totalActivity === 0) {
     // If no activity data, split evenly or assign to platform
@@ -382,28 +396,28 @@ export async function calculateCostSharing(
       platformShare: benefitCost,
       operatorShares: {},
       totalCost: benefitCost,
-    }
+    };
   }
 
   // Calculate operator shares based on activity proportion
-  const operatorShares: Record<string, number> = {}
+  const operatorShares: Record<string, number> = {};
   for (const [operatorId, activity] of Object.entries(operatorActivity)) {
-    operatorShares[operatorId] = Math.floor((activity / totalActivity) * benefitCost)
+    operatorShares[operatorId] = Math.floor((activity / totalActivity) * benefitCost);
   }
 
   // Platform covers 20% of costs (configurable)
-  const platformPercentage = 0.20
-  const platformShare = Math.floor(benefitCost * platformPercentage)
+  const platformPercentage = 0.20;
+  const platformShare = Math.floor(benefitCost * platformPercentage);
 
   // Adjust for rounding errors
-  const totalAllocated = platformShare + Object.values(operatorShares).reduce((sum, share) => sum + share, 0)
-  const roundingDifference = benefitCost - totalAllocated
+  const totalAllocated = platformShare + Object.values(operatorShares).reduce((sum, share) => sum + share, 0);
+  const roundingDifference = benefitCost - totalAllocated;
 
   if (roundingDifference !== 0) {
     // Add/subtract rounding difference to largest operator share
-    const largestOperator = Object.entries(operatorShares).sort(([, a], [, b]) => b - a)[0]
+    const largestOperator = Object.entries(operatorShares).sort(([, a], [, b]) => b - a)[0];
     if (largestOperator) {
-      operatorShares[largestOperator[0]]! += roundingDifference
+      operatorShares[largestOperator[0]]! += roundingDifference;
     }
   }
 
@@ -411,7 +425,7 @@ export async function calculateCostSharing(
     platformShare,
     operatorShares,
     totalCost: benefitCost,
-  }
+  };
 }
 
 /**
@@ -432,7 +446,7 @@ async function getUserOperatorActivity(
   return {
     operator1: 100000, // $1,000 in cents
     operator2: 50000, // $500 in cents
-  }
+  };
 }
 
 /**
@@ -449,19 +463,19 @@ export async function processVIPCashback(
 }>
 {
   try {
-    const vipInfo = await getVIPInfo(userId)
+    const vipInfo = await getVIPInfo(userId);
     if (!vipInfo || !vipInfo.levelBenefits.cashback) {
       return {
         success: false,
         cashbackAmount: 0,
         allocation: { platformShare: 0, operatorShares: {}, totalCost: 0 },
         error: 'User not eligible for cashback',
-      }
+      };
     }
 
     // Calculate cashback based on period activity
-    const periodActivity = await getUserPeriodActivity(userId, period)
-    const cashbackAmount = Math.floor(periodActivity * (vipInfo.levelBenefits.cashback / 100))
+    const periodActivity = await getUserPeriodActivity(userId, period);
+    const cashbackAmount = Math.floor(periodActivity * (vipInfo.levelBenefits.cashback / 100));
 
     if (cashbackAmount <= 0) {
       return {
@@ -469,11 +483,11 @@ export async function processVIPCashback(
         cashbackAmount: 0,
         allocation: { platformShare: 0, operatorShares: {}, totalCost: 0 },
         error: 'No cashback earned',
-      }
+      };
     }
 
     // Calculate cost sharing
-    const allocation = await calculateCostSharing(cashbackAmount)
+    const allocation = await calculateCostSharing(cashbackAmount);
 
     // Apply cashback (this would credit to user's account)
     // await applyCashback(userId, cashbackAmount);
@@ -482,16 +496,16 @@ export async function processVIPCashback(
       success: true,
       cashbackAmount,
       allocation,
-    }
+    };
   }
   catch (error) {
-    console.error('VIP cashback processing failed:', error)
+    console.error('VIP cashback processing failed:', error);
     return {
       success: false,
       cashbackAmount: 0,
       allocation: { platformShare: 0, operatorShares: {}, totalCost: 0 },
       error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    };
   }
 }
 
@@ -504,19 +518,19 @@ async function getUserPeriodActivity(
 ): Promise<number>
 {
   // Calculate period dates
-  const now = new Date()
-  const periodStart = new Date(now)
+  const now = new Date();
+  const periodStart = new Date(now);
 
   if (period === 'weekly') {
-    periodStart.setDate(now.getDate() - 7)
+    periodStart.setDate(now.getDate() - 7);
   }
   else {
-    periodStart.setMonth(now.getMonth() - 1)
+    periodStart.setMonth(now.getMonth() - 1);
   }
 
   // This would query actual betting activity for the period
   // For now, returning placeholder
-  return 100000 // $1,000 in cents
+  return 100000; // $1,000 in cents
 }
 
 /**
@@ -524,7 +538,7 @@ async function getUserPeriodActivity(
  */
 export function getVIPLevels(): VIPLevel[]
 {
-  return [...DEFAULT_VIP_LEVELS]
+  return [...DEFAULT_VIP_LEVELS];
 }
 
 /**
@@ -532,5 +546,5 @@ export function getVIPLevels(): VIPLevel[]
  */
 export function getVIPLevel(level: number): VIPLevel | null
 {
-  return DEFAULT_VIP_LEVELS.find(l => l.level === level) || null
+  return DEFAULT_VIP_LEVELS.find(l => l.level === level) || null;
 }

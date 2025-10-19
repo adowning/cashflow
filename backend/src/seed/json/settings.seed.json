@@ -1,82 +1,95 @@
 [
   {
-    "name": "Premium Gaming Configuration",
-    "referralCodeCount": 45,
-    "referralCommissionRate": 0.32,
-    "rates": "[{\"USD\": 1}, {\"EUR\": 0.85}, {\"GBP\": 0.73}]",
-    "createdAt": "2024-01-15T10:00:00.000Z",
-    "updatedAt": "2024-01-15T10:00:00.000Z"
-  },
-  {
-    "name": "Standard Player Settings",
-    "referralCodeCount": 25,
-    "referralCommissionRate": 0.18,
-    "rates": "[{\"USD\": 1}, {\"CAD\": 1.35}]",
-    "createdAt": "2024-02-20T14:30:00.000Z",
-    "updatedAt": "2024-02-20T14:30:00.000Z"
-  },
-  {
-    "name": "VIP Exclusive Configuration",
-    "referralCodeCount": 75,
-    "referralCommissionRate": 0.45,
-    "rates": "[{\"USD\": 1}, {\"EUR\": 0.85}, {\"CHF\": 0.92}]",
-    "createdAt": "2024-03-10T09:15:00.000Z",
-    "updatedAt": "2024-03-10T09:15:00.000Z"
-  },
-  {
-    "name": "Tournament Mode Settings",
-    "referralCodeCount": 60,
-    "referralCommissionRate": 0.28,
-    "rates": "[{\"USD\": 1}, {\"JPY\": 150}]",
-    "createdAt": "2024-04-05T16:45:00.000Z",
-    "updatedAt": "2024-04-05T16:45:00.000Z"
-  },
-  {
-    "name": "Weekend Boost Configuration",
-    "referralCodeCount": 35,
-    "referralCommissionRate": 0.22,
-    "rates": "[{\"USD\": 1}, {\"AUD\": 1.52}]",
-    "createdAt": "2024-05-12T11:20:00.000Z",
-    "updatedAt": "2024-05-12T11:20:00.000Z"
-  },
-  {
-    "name": "Loyalty Program Settings",
-    "referralCodeCount": 50,
-    "referralCommissionRate": 0.35,
-    "rates": "[{\"USD\": 1}, {\"SEK\": 10.5}]",
-    "createdAt": "2024-06-18T13:10:00.000Z",
-    "updatedAt": "2024-06-18T13:10:00.000Z"
-  },
-  {
-    "name": "High Roller Configuration",
-    "referralCodeCount": 90,
-    "referralCommissionRate": 0.50,
-    "rates": "[{\"USD\": 1}, {\"HKD\": 7.8}]",
-    "createdAt": "2024-07-22T15:35:00.000Z",
-    "updatedAt": "2024-07-22T15:35:00.000Z"
-  },
-  {
-    "name": "New Player Welcome Setup",
-    "referralCodeCount": 30,
-    "referralCommissionRate": 0.15,
-    "rates": "[{\"USD\": 1}, {\"NZD\": 1.65}]",
-    "createdAt": "2024-08-30T12:50:00.000Z",
-    "updatedAt": "2024-08-30T12:50:00.000Z"
-  },
-  {
-    "name": "Seasonal Promotion Config",
-    "referralCodeCount": 40,
+    "id": "default-config",
+    "name": "Default System Configuration",
+    "referralCodeCount": 20,
     "referralCommissionRate": 0.25,
-    "rates": "[{\"USD\": 1}, {\"NOK\": 10.8}]",
-    "createdAt": "2024-09-14T17:25:00.000Z",
-    "updatedAt": "2024-09-14T17:25:00.000Z"
-  },
-  {
-    "name": "Affiliate Network Settings",
-    "referralCodeCount": 80,
-    "referralCommissionRate": 0.40,
-    "rates": "[{\"USD\": 1}, {\"SGD\": 1.35}, {\"KRW\": 1300}]",
-    "createdAt": "2024-10-08T08:40:00.000Z",
-    "updatedAt": "2024-10-08T08:40:00.000Z"
+    "rates": "[{\"USD\": 1}]",
+    "commission": {
+      "master": 30,
+      "affiliate": 20,
+      "subAffiliate": 10
+    },
+    "jackpotConfig": {
+      "minor": { "rate": 0.02, "seedAmount": 100000, "maxAmount": 1000000 },
+      "major": { "rate": 0.01, "seedAmount": 1000000, "maxAmount": 10000000 },
+      "mega": { "rate": 0.005, "seedAmount": 10000000, "maxAmount": 100000000 }
+    },
+    "gameGroups": {},
+    "vipConfig": {
+      "pointsPerDollar": 1,
+      "levelMultipliers": { "1": 1.0, "2": 1.2, "3": 1.5, "4": 2.0, "5": 2.5 },
+      "costSharingPercentage": 20
+    },
+    "wageringConfig": {
+      "defaultWageringMultiplier": 30,
+      "maxBonusBetPercentage": 50,
+      "bonusExpiryDays": 30
+    },
+    "systemLimits": {
+      "maxBetAmount": 100000,
+      "maxDailyLoss": 1000000,
+      "maxSessionLoss": 100000,
+      "minBetAmount": 100
+    },
+    "vipLevels": [
+      {
+        "id": "vip-level-1",
+        "parentId": "vip-rank-1",
+        "minXpNeeded": 0,
+        "levelNumber": 1,
+        "levelName": "Bronze",
+        "spinBonusMultiplier": 0.1,
+        "levelUpBonusAmount": 100,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "vip-level-2",
+        "parentId": "vip-rank-1",
+        "minXpNeeded": 1000,
+        "levelNumber": 2,
+        "levelName": "Silver",
+        "spinBonusMultiplier": 0.15,
+        "levelUpBonusAmount": 250,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "vip-level-3",
+        "parentId": "vip-rank-1",
+        "minXpNeeded": 5000,
+        "levelNumber": 3,
+        "levelName": "Gold",
+        "spinBonusMultiplier": 0.2,
+        "levelUpBonusAmount": 500,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "vip-level-4",
+        "parentId": "vip-rank-1",
+        "minXpNeeded": 15000,
+        "levelNumber": 4,
+        "levelName": "Platinum",
+        "spinBonusMultiplier": 0.25,
+        "levelUpBonusAmount": 1000,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "vip-level-5",
+        "parentId": "vip-rank-1",
+        "minXpNeeded": 50000,
+        "levelNumber": 5,
+        "levelName": "Diamond",
+        "spinBonusMultiplier": 0.3,
+        "levelUpBonusAmount": 2500,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      }
+    ],
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 ]

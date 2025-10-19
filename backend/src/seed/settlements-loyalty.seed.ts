@@ -1,27 +1,27 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db from "../database/index";
-import * as schema from "../types";
-import { rand, randNumber, randRecentDate } from "@ngneat/falso";
-import { sql } from 'drizzle-orm'
-import { endOfWeek, startOfWeek, subWeeks } from "date-fns";
-import { nanoid } from "nanoid";
+import db from '../database/index';
+import * as schema from '../database/schema';
+import { rand, randNumber, randRecentDate } from '@ngneat/falso';
+import { sql } from 'drizzle-orm';
+import { endOfWeek, startOfWeek, subWeeks } from 'date-fns';
+import { nanoid } from 'nanoid';
 
-const tableNames = ['affiliates', 'affiliate_logs']
+const tableNames = ['affiliates', 'affiliate_logs'];
 
-  const truncateQuery = `TRUNCATE TABLE ${tableNames.map((name) => `"${name}"`).join(", ")} RESTART IDENTITY CASCADE;`;
+const truncateQuery = `TRUNCATE TABLE ${tableNames.map((name) => `"${name}"`).join(', ')} RESTART IDENTITY CASCADE;`;
 
   
 export async function seed()
 {
-  console.log("Seeding operator settlements and loyalty fund transactions...");
-    await db.execute(sql.raw(truncateQuery));
+  console.log('Seeding operator settlements and loyalty fund transactions...');
+  await db.execute(sql.raw(truncateQuery));
 
   const allOperators = await db.select().from(schema.operators);
   const allUsers = await db.select().from(schema.users);
 
   if (allOperators.length === 0 || allUsers.length === 0) {
-    console.log("Cannot seed settlements without operators and users.");
+    console.log('Cannot seed settlements without operators and users.');
     return;
   }
 
@@ -59,7 +59,7 @@ export async function seed()
 
       loyaltyTxsToCreate.push({
         id: nanoid(),
-        type: "CONTRIBUTION",
+        type: 'CONTRIBUTION',
         amount: loyaltyFundContribution.toFixed(2),
         description: `Weekly settlement for ${operator.name}`,
         operatorId: operator.id,
@@ -73,12 +73,12 @@ export async function seed()
     const user = rand(allUsers);
     loyaltyTxsToCreate.push({
       id: nanoid(),
-      type: "PAYOUT",
+      type: 'PAYOUT',
       amount: randNumber({ min: 500, max: 10000 }).toFixed(2),
       description: rand([
-        "Daily Cashback",
-        "Level Up Bonus",
-        "Special Promotion",
+        'Daily Cashback',
+        'Level Up Bonus',
+        'Special Promotion',
       ]),
       userId: user.id,
       createdAt: randRecentDate({ days: 7 }),
@@ -89,12 +89,12 @@ export async function seed()
     const user = rand(allUsers);
     loyaltyTxsToCreate.push({
       id: nanoid(),
-      type: "PAYOUT",
+      type: 'PAYOUT',
       amount: randNumber({ min: 500, max: 10000 }).toFixed(2),
       description: rand([
-        "Daily Cashback",
-        "Level Up Bonus",
-        "Special Promotion",
+        'Daily Cashback',
+        'Level Up Bonus',
+        'Special Promotion',
       ]),
       userId: user.id,
       createdAt: randRecentDate({ days: 30 }),
@@ -104,6 +104,6 @@ export async function seed()
   await db.insert(schema.loyaltyFundTransactions).values(loyaltyTxsToCreate);
 
   console.log(
-    "Operator settlements and loyalty fund transactions seeded successfully."
+    'Operator settlements and loyalty fund transactions seeded successfully.'
   );
 }

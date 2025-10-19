@@ -4,13 +4,12 @@ import
   randPassword,
   randPastDate,
   randUserName,
-} from "@ngneat/falso";
-import { eq, sql } from "drizzle-orm";
-import { nanoid } from "nanoid";
-import db from "../database/index";
-import * as schema from "../database/schema";
-import { generateRandomVipInfo } from "./vip";
-import { v4 as uuidV4 } from 'uuid';
+} from '@ngneat/falso';
+import { eq, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import db from '../database/index';
+import * as schema from '../database/schema';
+import { generateRandomVipInfo } from './vip';
 
 export async function seedUsers(count: number, operatorId: string)
 {
@@ -22,15 +21,15 @@ export async function seedUsers(count: number, operatorId: string)
   const allAffiliates = await db.select().from(schema.affiliates);
 
   if (allVipLevels.length === 0) {
-    throw new Error("VIP levels must be seeded before users.");
+    throw new Error('VIP levels must be seeded before users.');
   }
- console.log(allAuthSessions)
+  console.log(allAuthSessions);
 
   for (let i = 0; i < allAuthUsers.length; i++) {
     
     const affiliateN = randNumber({ min: 0, max: allAffiliates.length });
-    const affiliate = allAffiliates[affiliateN]
-    const refCode = affiliate?.referralCode
+    const affiliate = allAffiliates[affiliateN];
+    const refCode = affiliate?.referralCode;
     const username = randUserName();
     const password = randPassword();
     const hashedPassword = await Bun.password.hash(password);
@@ -39,8 +38,8 @@ export async function seedUsers(count: number, operatorId: string)
     const playerAvatar = `avatar-0${avatarN}.webp`;
 
     // const userId = nanoid();
-    const authUser = allAuthUsers[i]
-    console.log(authUser)
+    const authUser = allAuthUsers[i];
+    console.log(authUser);
     await db.transaction(async (tx) =>
     {
       const [newUser] = await tx
@@ -59,7 +58,7 @@ export async function seedUsers(count: number, operatorId: string)
         })
         .returning();
 
-      if (!newUser) throw new Error("no new user");
+      if (!newUser) throw new Error('no new user');
 
       //  const [refInfo] = await tx
       //   .insert(schema.referralCodes)
@@ -80,7 +79,7 @@ export async function seedUsers(count: number, operatorId: string)
         .values(rawVipInfo)
         .returning();
 
-      if (!vipInfo) throw new Error("no new vipinfo");
+      if (!vipInfo) throw new Error('no new vipinfo');
 
       await tx
         .update(schema.players)
@@ -90,8 +89,8 @@ export async function seedUsers(count: number, operatorId: string)
       const initialBalance = randNumber({ min: 1000, max: 20000 });
 
       const walletId = crypto.randomUUID();
-      if(newUser.id === "system")return
-      if(!newUser.id)return
+      if(newUser.id === 'system')return;
+      if(!newUser.id)return;
       const [newWallet] = await tx
         .insert(schema.wallets)
         .values({
@@ -116,7 +115,7 @@ export async function seedUsers(count: number, operatorId: string)
       const balanceRecord = {
         id: nanoid(),
         playerId: newUser.id,
-        currencyId: "USD",
+        currencyId: 'USD',
         walletId: newWallet.id,
         amount: initialBalance,
         bonus: 0,
@@ -133,13 +132,13 @@ export async function seedUsers(count: number, operatorId: string)
       //   availableBalance: initialBalance,
       // })
       // if(i < 4)
-      const asess =  allAuthSessions[i]
-      if(!asess)return
+      const asess =  allAuthSessions[i];
+      if(!asess)return;
       await tx.insert(schema.gameSessions).values({
-       id: nanoid(),
-       authSessionId: asess.id,
+        id: nanoid(),
+        authSessionId: asess.id,
         playerId: newUser.id,
-        status: "ACTIVE",
+        status: 'ACTIVE',
       });
 
       console.log(
@@ -150,9 +149,9 @@ export async function seedUsers(count: number, operatorId: string)
 }
 export async function seedSystem(operatorId: string)
 {
-  console.log("🔒 Seeding hardcoded user 'asdf' with a wallet...");
-  const username = "system";
-  const password = "systemasdfasdf";
+  console.log('🔒 Seeding hardcoded user \'asdf\' with a wallet...');
+  const username = 'system';
+  const password = 'systemasdfasdf';
 
   const [existingUser] = await db
     .select()
@@ -160,7 +159,7 @@ export async function seedSystem(operatorId: string)
     .where(eq(schema.players.playername, username));
 
   if (existingUser) {
-    console.log("✅ Hardcoded user 'asdf' already exists.");
+    console.log('✅ Hardcoded user \'asdf\' already exists.');
     return;
   }
 
@@ -170,16 +169,16 @@ export async function seedSystem(operatorId: string)
     const [newUser] = await tx
       .insert(schema.players)
       .values({
-        id: "system",
+        id: 'system',
         playername: username,
         totalXpGained: 0,
-        avatarUrl: `avatar-01.webp`,
+        avatarUrl: 'avatar-01.webp',
         passwordHash: hashedPassword,
         // vipLevel: 1,
       })
       .returning();
     const walletId = crypto.randomUUID();
-    if (!newUser.id) return//throw new Error("no new user");
+    if (!newUser.id) return;//throw new Error("no new user");
     const [newWallet] = await tx
       .insert(schema.wallets)
       .values({
@@ -192,7 +191,7 @@ export async function seedSystem(operatorId: string)
       })
       .returning();
 
-    if (!newWallet) throw new Error("no new user");
+    if (!newWallet) throw new Error('no new user');
 
     console.log(newWallet);
     await tx
@@ -204,16 +203,16 @@ export async function seedSystem(operatorId: string)
     //   amount: 50000,
     //   availableBalance: 50000,
     // })
-      // Session creation is handled by better-auth.ts
+    // Session creation is handled by better-auth.ts
   });
 
   console.log(`✅ Hardcoded user 'asdf' created. Password is '${password}'`);
 }
 export async function seedHardcodedUser(operatorId: string)
 {
-  console.log("🔒 Seeding hardcoded user 'asdf' with a wallet...");
-  const username = "asdf";
-  const password = "asdfasdf";
+  console.log('🔒 Seeding hardcoded user \'asdf\' with a wallet...');
+  const username = 'asdf';
+  const password = 'asdfasdf';
 
   const [existingUser] = await db
     .select()
@@ -221,7 +220,7 @@ export async function seedHardcodedUser(operatorId: string)
     .where(eq(schema.players.playername, username));
 
   if (existingUser) {
-    console.log("✅ Hardcoded user 'asdf' already exists.");
+    console.log('✅ Hardcoded user \'asdf\' already exists.');
     return;
   }
 
@@ -233,14 +232,14 @@ export async function seedHardcodedUser(operatorId: string)
       .values({
         playername: username,
         totalXpGained: 0,
-        avatarUrl: `avatar-01.webp`,
+        avatarUrl: 'avatar-01.webp',
         passwordHash: hashedPassword,
         // vipLevel: 1,
       })
       .returning();
     const walletId = crypto.randomUUID();
 
-    if (!newUser.id) return
+    if (!newUser.id) return;
 
     const [newWallet] = await tx
       .insert(schema.wallets)
@@ -254,7 +253,7 @@ export async function seedHardcodedUser(operatorId: string)
       })
       .returning();
 
-    if (!newWallet) throw new Error("no new user");
+    if (!newWallet) throw new Error('no new user');
 
     console.log(newWallet);
     await tx
@@ -276,7 +275,7 @@ export async function seedHardcodedUser(operatorId: string)
       .values(rawVipInfo)
       .returning();
 
-    if (!vipInfo) throw new Error("no new vipinfo");
+    if (!vipInfo) throw new Error('no new vipinfo');
 
     await tx
       .update(schema.players)
@@ -288,7 +287,7 @@ export async function seedHardcodedUser(operatorId: string)
 }
 export async function seedWallets(operatorId: string)
 {
-   const users = await db.select().from(schema.users);
+  const users = await db.select().from(schema.users);
   for (const user of users) {
 
     const existingWallet = await db
@@ -296,7 +295,7 @@ export async function seedWallets(operatorId: string)
       .from(schema.wallets)
       .where(eq(schema.wallets.playerId, user.id));
 
-    if (!existingWallet.length) throw new Error("no existingWallet");
+    if (!existingWallet.length) throw new Error('no existingWallet');
     const balances: (typeof schema.balances.$inferInsert)[] = [
       {
         playerId: user.id,
@@ -306,24 +305,24 @@ export async function seedWallets(operatorId: string)
         updatedAt: new Date(),
         pending: 0,
         amount: 2000,
-        currencyId: "USD",
+        currencyId: 'USD',
         bonus: 500,
         turnover: 0,
         withdrawable: 0
       }
-    ]
+    ];
 
     await db
       .update(schema.players)
       .set({ activeWalletId: existingWallet[0].id })
       .where(eq(schema.players.id, user.id));
-    console.log(`✅ added activeWalletId to user `);
+    console.log('✅ added activeWalletId to user ');
 
     // Insert balance record for the wallet
     const balanceRecord = {
       id: nanoid(),
       playerId: user.id,
-      currencyId: "USD",
+      currencyId: 'USD',
       walletId: existingWallet[0].id,
       amount: existingWallet[0].balance,
       bonus: 0,
@@ -338,7 +337,7 @@ export async function seedWallets(operatorId: string)
 
     const exisitngOperator = await db.select().from(schema.operators);
 
-    if (!exisitngOperator.length) throw new Error("no existingOperator");
+    if (!exisitngOperator.length) throw new Error('no existingOperator');
 
 
     // if (exisitngOperator.length > 0) {
@@ -346,7 +345,7 @@ export async function seedWallets(operatorId: string)
       .update(schema.players)
       .set({ activeOperatorId: exisitngOperator[0].id })
       .where(eq(schema.players.id, user.id));
-    console.log(`✅ added operatorId to user `);
+    console.log('✅ added operatorId to user ');
     // }
   }
 }

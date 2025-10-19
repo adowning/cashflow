@@ -1,4 +1,4 @@
-import { notifyError } from "./realtime-notifications.service";
+import { notifyError } from './realtime-notifications.service';
 
 /**
  * Error handling system with player notifications for network/provider failures

@@ -1,11 +1,11 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db from '../../database'
-import type { Deposits, Withdrawal } from '../../database/interfaces'
-import { deposits, withdrawals } from '../../database/schema'
-import { and, desc, eq, gte, sql } from 'drizzle-orm'
-import { cleanupExpiredDeposits } from './deposit.service'
-import { processWithdrawalAction } from './withdrawal.service'
+import db from '../../database';
+import type { Deposits, Withdrawal } from '../../database/interfaces';
+import { deposits, withdrawals } from '../../database/schema';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
+import { cleanupExpiredDeposits } from './deposit.service';
+import { processWithdrawalAction } from './withdrawal.service';
 
 /**
  * Admin service for deposit/withdrawal management
@@ -65,8 +65,8 @@ export async function getAdminDashboardSummary(): Promise<{
 }>
 {
   try {
-    const today = new Date()
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
     // Get transaction summary
     const depositStats = await db
@@ -76,7 +76,7 @@ export async function getAdminDashboardSummary(): Promise<{
         amount: sql<number>`SUM(${deposits.amount})`,
       })
       .from(deposits)
-      .groupBy(deposits.status)
+      .groupBy(deposits.status);
 
     const withdrawalStats = await db
       .select({
@@ -85,14 +85,14 @@ export async function getAdminDashboardSummary(): Promise<{
         amount: sql<number>`SUM(${withdrawals.amount})`,
       })
       .from(withdrawals)
-      .groupBy(withdrawals.status)
+      .groupBy(withdrawals.status);
 
     // Calculate summary metrics
-    const totalDeposits = depositStats.reduce((sum, stat) => sum + stat.count, 0)
-    const totalWithdrawals = withdrawalStats.reduce((sum, stat) => sum + stat.count, 0)
+    const totalDeposits = depositStats.reduce((sum, stat) => sum + stat.count, 0);
+    const totalWithdrawals = withdrawalStats.reduce((sum, stat) => sum + stat.count, 0);
 
-    const pendingDeposits = depositStats.find(s => s.status === 'PENDING')?.count || 0
-    const pendingWithdrawals = withdrawalStats.find(s => s.status === 'PENDING')?.count || 0
+    const pendingDeposits = depositStats.find(s => s.status === 'PENDING')?.count || 0;
+    const pendingWithdrawals = withdrawalStats.find(s => s.status === 'PENDING')?.count || 0;
 
     const completedToday = await db
       .select({ count: sql<number>`COUNT(*)` })
@@ -100,7 +100,7 @@ export async function getAdminDashboardSummary(): Promise<{
       .where(and(
         eq(deposits.status, 'COMPLETED'),
         gte(deposits.updatedAt, startOfDay)
-      ))
+      ));
 
     const totalVolumeToday = await db
       .select({ amount: sql<number>`SUM(${deposits.amount})` })
@@ -108,16 +108,16 @@ export async function getAdminDashboardSummary(): Promise<{
       .where(and(
         eq(deposits.status, 'COMPLETED'),
         gte(deposits.updatedAt, startOfDay)
-      ))
+      ));
 
     // Get recent transactions for display
     const recentTransactions = await db.query.deposits.findMany({
       orderBy: [desc(deposits.createdAt)],
       limit: 10
-    })
+    });
 
     // Generate alerts
-    const alerts = await generateSystemAlerts()
+    const alerts = await generateSystemAlerts();
 
     return {
       summary: {
@@ -131,10 +131,10 @@ export async function getAdminDashboardSummary(): Promise<{
       },
       recentTransactions,
       alerts
-    }
+    };
 
   } catch (error) {
-    console.error('Failed to get admin dashboard summary:', error)
+    console.error('Failed to get admin dashboard summary:', error);
     return {
       summary: {
         totalDeposits: 0,
@@ -148,7 +148,7 @@ export async function getAdminDashboardSummary(): Promise<{
       recentTransactions: [],
       alerts: [],
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -169,24 +169,24 @@ export async function getFilteredTransactions(filter: AdminTransactionFilter): P
       orderBy: [desc(deposits.createdAt)],
       limit: filter.limit || 50,
       offset: filter.offset || 0
-    }) as Deposits[]
+    }) as Deposits[];
 
     // Get total count
-    const totalResult = await db.select({ count: sql<number>`count(*)` }).from(deposits)
-    const total = totalResult[0]?.count || 0
+    const totalResult = await db.select({ count: sql<number>`count(*)` }).from(deposits);
+    const total = totalResult[0]?.count || 0;
 
     return {
       transactions,
       total
-    }
+    };
 
   } catch (error) {
-    console.error('Failed to get filtered transactions:', error)
+    console.error('Failed to get filtered transactions:', error);
     return {
       transactions: [],
       total: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -214,31 +214,31 @@ export async function getUserTransactionHistory(
     const _deposits = await db.query.deposits.findMany({
       where: eq(deposits.playerId, userId),
       orderBy: [desc(deposits.createdAt)]
-    })
+    });
 
     // Get withdrawals if requested
-    let _withdrawals: Withdrawal[] = []
+    let _withdrawals: Withdrawal[] = [];
     if (includeWithdrawals) {
       _withdrawals = await db.query.withdrawals.findMany({
         where: eq(withdrawals.playerId, userId),
         orderBy: [desc(withdrawals.createdAt)]
-      })
+      });
     }
 
     // Calculate summary
     const totalDeposits = _deposits
       .filter(d => d.status === 'COMPLETED')
-      .reduce((sum, d) => sum + Number(d.amount), 0)
+      .reduce((sum, d) => sum + Number(d.amount), 0);
 
     const totalWithdrawals = _withdrawals
       .filter(w => w.status === 'COMPLETED')
-      .reduce((sum, w) => sum + Number(w.amount), 0)
+      .reduce((sum, w) => sum + Number(w.amount), 0);
 
-    const firstDeposit = _deposits.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0]
+    const firstDeposit = _deposits.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
     const lastActivity = [
       ..._deposits.map(d => d.createdAt),
       ..._withdrawals.map(w => w.createdAt)
-    ].sort((a, b) => (b?.getTime() || 0) - (a?.getTime() || 0))[0]
+    ].sort((a, b) => (b?.getTime() || 0) - (a?.getTime() || 0))[0];
 
     return {
       deposits: _deposits,
@@ -250,10 +250,10 @@ export async function getUserTransactionHistory(
         firstDepositDate: firstDeposit?.createdAt,
         lastActivityDate: lastActivity || undefined
       }
-    }
+    };
 
   } catch (error) {
-    console.error('Failed to get user transaction history:', error)
+    console.error('Failed to get user transaction history:', error);
     return {
       deposits: [],
       withdrawals: [],
@@ -263,7 +263,7 @@ export async function getUserTransactionHistory(
         netAmount: 0
       },
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -287,7 +287,7 @@ export async function bulkProcessWithdrawals(
     processed: 0,
     failed: 0,
     errors: [] as string[]
-  }
+  };
 
   for (const withdrawalId of withdrawalIds) {
     try {
@@ -296,21 +296,21 @@ export async function bulkProcessWithdrawals(
         action,
         adminId,
         reason
-      })
+      });
 
       if (result.success) {
-        results.processed++
+        results.processed++;
       } else {
-        results.failed++
-        results.errors.push(`${withdrawalId}: ${result.error}`)
+        results.failed++;
+        results.errors.push(`${withdrawalId}: ${result.error}`);
       }
     } catch (error) {
-      results.failed++
-      results.errors.push(`${withdrawalId}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      results.failed++;
+      results.errors.push(`${withdrawalId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  return results
+  return results;
 }
 
 /**
@@ -318,7 +318,7 @@ export async function bulkProcessWithdrawals(
  */
 async function generateSystemAlerts(): Promise<string[]>
 {
-  const alerts: string[] = []
+  const alerts: string[] = [];
 
   try {
     // Check for expired pending deposits
@@ -327,10 +327,10 @@ async function generateSystemAlerts(): Promise<string[]>
         eq(deposits.status, 'PENDING'),
         sql`${deposits.createdAt} < ${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()}`
       )
-    })
+    });
 
     if (expiredDeposits.length > 0) {
-      alerts.push(`${expiredDeposits.length} deposits have been pending for more than 24 hours`)
+      alerts.push(`${expiredDeposits.length} deposits have been pending for more than 24 hours`);
     }
 
     // Check for high-value pending withdrawals
@@ -339,10 +339,10 @@ async function generateSystemAlerts(): Promise<string[]>
         eq(withdrawals.status, 'PENDING'),
         sql`${withdrawals.amount} > ${100000}` // $1,000+ withdrawals
       )
-    })
+    });
 
     if (highValueWithdrawals.length > 0) {
-      alerts.push(`${highValueWithdrawals.length} high-value withdrawals pending review`)
+      alerts.push(`${highValueWithdrawals.length} high-value withdrawals pending review`);
     }
 
     // Check for suspicious patterns
@@ -352,17 +352,17 @@ async function generateSystemAlerts(): Promise<string[]>
         sql`${deposits.amount} > ${50000}`, // $500+ deposits
         gte(deposits.createdAt, new Date(Date.now() - 60 * 60 * 1000)) // Last hour
       )
-    })
+    });
 
     if (recentLargeDeposits.length > 5) {
-      alerts.push(`Unusual activity: ${recentLargeDeposits.length} large deposits in the last hour`)
+      alerts.push(`Unusual activity: ${recentLargeDeposits.length} large deposits in the last hour`);
     }
 
   } catch (error) {
-    console.error('Failed to generate system alerts:', error)
+    console.error('Failed to generate system alerts:', error);
   }
 
-  return alerts
+  return alerts;
 }
 
 /**
@@ -379,36 +379,36 @@ export async function getTransactionAnalytics(
 }>
 {
   try {
-    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // Daily volume for the period
-    const dailyVolume = await getDailyVolume(startDate, days)
+    const dailyVolume = await getDailyVolume(startDate, days);
 
     // Payment method breakdown
-    const paymentMethodBreakdown = await getPaymentMethodBreakdown(startDate)
+    const paymentMethodBreakdown = await getPaymentMethodBreakdown(startDate);
 
     // Average transaction size
-    const avgSize = await getAverageTransactionSize(startDate)
+    const avgSize = await getAverageTransactionSize(startDate);
 
     // Top users by volume
-    const topUsers = await getTopUsersByVolume(startDate, 10)
+    const topUsers = await getTopUsersByVolume(startDate, 10);
 
     return {
       dailyVolume,
       paymentMethodBreakdown,
       averageTransactionSize: avgSize,
       topUsers
-    }
+    };
 
   } catch (error) {
-    console.error('Failed to get transaction analytics:', error)
+    console.error('Failed to get transaction analytics:', error);
     return {
       dailyVolume: [],
       paymentMethodBreakdown: {},
       averageTransactionSize: 0,
       topUsers: [],
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -417,11 +417,11 @@ export async function getTransactionAnalytics(
  */
 async function getDailyVolume(startDate: Date, days: number): Promise<DailyVolumeData[]>
 {
-  const dailyData: DailyVolumeData[] = []
+  const dailyData: DailyVolumeData[] = [];
 
   for (let i = 0; i < days; i++) {
-    const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000)
-    const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000)
+    const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+    const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
 
     const _deposits = await db
       .select({ amount: sql<number>`SUM(${deposits.amount})` })
@@ -430,7 +430,7 @@ async function getDailyVolume(startDate: Date, days: number): Promise<DailyVolum
         eq(deposits.status, 'COMPLETED'),
         gte(deposits.createdAt, date),
         sql`${deposits.createdAt} < ${nextDate.toISOString()}`
-      ))
+      ));
 
     const _withdrawals = await db
       .select({ amount: sql<number>`SUM(${withdrawals.amount})` })
@@ -439,26 +439,26 @@ async function getDailyVolume(startDate: Date, days: number): Promise<DailyVolum
         eq(withdrawals.status, 'COMPLETED'),
         gte(withdrawals.createdAt, date),
         sql`${withdrawals.createdAt} < ${nextDate.toISOString()}`
-      ))
+      ));
 
     if (!_deposits[0] || !_withdrawals[0]) {
-      console.warn('No data found for date range')
+      console.warn('No data found for date range');
       dailyData.push({
         date: date.toISOString().split('T')[0] || '',
         deposits: 0,
         withdrawals: 0
-      })
-      continue
+      });
+      continue;
     }
 
     dailyData.push({
       date: date.toISOString().split('T')[0] || new Date().toISOString().split('T')[0] || '',
       deposits: _deposits[0]?.amount || 0,
       withdrawals: _withdrawals[0]?.amount || 0
-    })
+    });
   }
 
-  return dailyData
+  return dailyData;
 }
 
 /**
@@ -466,15 +466,15 @@ async function getDailyVolume(startDate: Date, days: number): Promise<DailyVolum
  */
 async function getPaymentMethodBreakdown(_startDate: Date): Promise<Record<string, number>>
 {
-  const breakdown: Record<string, number> = {}
+  const breakdown: Record<string, number> = {};
 
   // This would query actual payment method data from transactions
   // For now, returning placeholder structure
-  breakdown['CASHAPP'] = 0
-  breakdown['INSTORE_CASH'] = 0
-  breakdown['INSTORE_CARD'] = 0
+  breakdown['CASHAPP'] = 0;
+  breakdown['INSTORE_CASH'] = 0;
+  breakdown['INSTORE_CARD'] = 0;
 
-  return breakdown
+  return breakdown;
 }
 
 /**
@@ -488,11 +488,11 @@ async function getAverageTransactionSize(startDate: Date): Promise<number>
     .where(and(
       eq(deposits.status, 'COMPLETED'),
       gte(deposits.createdAt, startDate)
-    ))
+    ));
 
-  if (!result[0]) throw new Error('no deposits')
+  if (!result[0]) throw new Error('no deposits');
 
-  return result[0].avg || 0
+  return result[0].avg || 0;
 }
 
 /**
@@ -502,7 +502,7 @@ async function getTopUsersByVolume(_startDate: Date, _limit: number): Promise<Ad
 {
   // This would query actual user transaction data grouped by user
   // For now, returning placeholder structure
-  return []
+  return [];
 }
 
 /**
@@ -521,21 +521,21 @@ export async function adjustTransaction(
 {
   try {
     // Log the adjustment for audit trail
-    console.log(`Admin ${adminId} ${adjustmentType} adjustment of ${amount} for transaction ${transactionId}. Reason: ${reason}`)
+    console.log(`Admin ${adminId} ${adjustmentType} adjustment of ${amount} for transaction ${transactionId}. Reason: ${reason}`);
 
     // In production, this would:
     // 1. Update the transaction record
     // 2. Adjust user balance accordingly
     // 3. Log the admin action for compliance
 
-    return { success: true }
+    return { success: true };
 
   } catch (error) {
-    console.error('Transaction adjustment failed:', error)
+    console.error('Transaction adjustment failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -553,27 +553,27 @@ export async function exportTransactionData(
 {
   try {
     // Get filtered transactions
-    const result = await getFilteredTransactions(filter)
+    const result = await getFilteredTransactions(filter);
 
     if (format === 'json') {
       return {
         success: true,
         data: JSON.stringify(result.transactions, null, 2)
-      }
+      };
     } else {
       // CSV export would be implemented here
       return {
         success: true,
         data: 'CSV export not yet implemented'
-      }
+      };
     }
 
   } catch (error) {
-    console.error('Transaction data export failed:', error)
+    console.error('Transaction data export failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -586,13 +586,13 @@ export async function performSystemMaintenance(): Promise<{
   error?: string
 }>
 {
-  const actions: string[] = []
+  const actions: string[] = [];
 
   try {
     // Clean up expired deposits
-    const cleanupResult = await cleanupExpiredDeposits()
+    const cleanupResult = await cleanupExpiredDeposits();
     if (cleanupResult.cancelled > 0) {
-      actions.push(`Cancelled ${cleanupResult.cancelled} expired deposits`)
+      actions.push(`Cancelled ${cleanupResult.cancelled} expired deposits`);
     }
 
     // Additional maintenance tasks would go here
@@ -600,14 +600,14 @@ export async function performSystemMaintenance(): Promise<{
     return {
       success: true,
       actions
-    }
+    };
 
   } catch (error) {
-    console.error('System maintenance failed:', error)
+    console.error('System maintenance failed:', error);
     return {
       success: false,
       actions: [],
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }

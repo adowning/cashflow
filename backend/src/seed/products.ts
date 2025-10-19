@@ -1,6 +1,6 @@
-import db from "../database/index";
-import * as schema from '../database/schema'
-import productsData from "./json/products.json";
+import db from '../database/index';
+import * as schema from '../database/schema';
+import productsData from './json/products.json';
 
 // Type definition for the products JSON data
 interface RawProductData {
@@ -22,10 +22,10 @@ export async function seedProducts(
   operatorId: string
 )
 {
-  console.log("🛍️ Seeding products...");
+  console.log('🛍️ Seeding products...');
 
   if (!operatorId) {
-    throw new Error("An Operator ID is required to seed products.");
+    throw new Error('An Operator ID is required to seed products.');
   }
 
   const productsToInsert = (productsData as RawProductData[]).map((product) => ({

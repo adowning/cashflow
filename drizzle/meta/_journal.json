@@ -1,0 +1,104 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1760609120589,
+      "tag": "0000_steady_tattoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1760614511887,
+      "tag": "0001_little_magdalene",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760844075962,
+      "tag": "0002_stiff_mystique",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1760851738570,
+      "tag": "0003_nasty_true_believers",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1760851856840,
+      "tag": "0004_left_the_executioner",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1760851925434,
+      "tag": "0005_blushing_dazzler",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1760852299668,
+      "tag": "0006_aspiring_scorpion",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1760852328462,
+      "tag": "0007_living_frog_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1760852621847,
+      "tag": "0008_simple_machine_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1760852821794,
+      "tag": "0009_kind_landau",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1760864933824,
+      "tag": "0010_parallel_photon",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1760866287266,
+      "tag": "0011_neat_nicolaos",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1760866847510,
+      "tag": "0012_sturdy_roughhouse",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1760868877239,
+      "tag": "0013_jittery_hulk",
+      "breakpoints": true
+    }
+  ]
+}

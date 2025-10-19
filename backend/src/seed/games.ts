@@ -2,10 +2,10 @@
 /** biome-ignore-all lint/suspicious/noTsIgnore: <> */
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db from "../database/index";
-import * as schema from '../database/schema'
+import db from '../database/index';
+import * as schema from '../database/schema';
 
-import * as rawgames from "./json/games_large.json";
+import * as rawgames from './json/games_large.json';
 
 // Type definition for the games JSON data
 interface RawGameData
@@ -90,8 +90,8 @@ for (const game of rawgames.default as RawGameData[]) {
   game.rtpStatOut = Math.floor(parseFloat(String(game.rtpStatOut || '0'))) || 0;
 
   // Boolean conversions
-  game.isActive = game.active === "true";
-  game.isFeatured = game.featured === "true";
+  game.isActive = game.active === 'true';
+  game.isFeatured = game.featured === 'true';
 
   // Field conversions with proper radix and type handling
   game.status = game.device ? parseInt(String(game.device), 10) || 0 : 0;
@@ -117,7 +117,7 @@ for (const game of rawgames.default as RawGameData[]) {
 // })
 export async function seedGames()
 {
-  console.log("🎮 Seeding games and categories...");
+  console.log('🎮 Seeding games and categories...');
 
   // const createdCategories = await db
   //   .insert(gameCategories)
@@ -126,32 +126,33 @@ export async function seedGames()
 
   const gamesToInsert = GAMES.map((game) => ({
     ...game,
+    jpgIds: [],
     // categoryId: rand(createdCategories).id,
   }));
 
-  console.log("Type of bids:", typeof gamesToInsert[0].bids, "Value:", gamesToInsert[0].bids);
-  console.log("Type of jpgIds:", typeof gamesToInsert[0].jpgIds, "Value:", gamesToInsert[0].jpgIds);
+  console.log('Type of bids:', typeof gamesToInsert[0].bids, 'Value:', gamesToInsert[0].bids);
+  console.log('Type of jpgIds:', typeof gamesToInsert[0].jpgIds, 'Value:', gamesToInsert[0].jpgIds);
 
   // Add validation before insert
   const invalidGames = gamesToInsert.filter(game => {
     const jpgIdsValid = Array.isArray(game.jpgIds);
     if (!jpgIdsValid) {
-      console.log("Invalid game:", game.id, "jpgIds:", game.jpgIds);
+      console.log('Invalid game:', game.id, 'jpgIds:', game.jpgIds);
       return true;
     }
     return false;
   });
 
   if (invalidGames.length > 0) {
-    console.error("Found invalid games with non-array jpgIds field");
-    throw new Error("Data validation failed");
+    console.error('Found invalid games with non-array jpgIds field');
+    throw new Error('Data validation failed');
   }
 
-  console.log("First game to insert:", JSON.stringify(gamesToInsert[0], null, 2));
-  console.log("Type of bids:", typeof gamesToInsert[0].bids);
-  console.log("Type of jpgIds:", typeof gamesToInsert[0].jpgIds);
+  console.log('First game to insert:', JSON.stringify(gamesToInsert[0], null, 2));
+  console.log('Type of bids:', typeof gamesToInsert[0].bids);
+  console.log('Type of jpgIds:', typeof gamesToInsert[0].jpgIds);
 
   await db.insert(schema.games).values(gamesToInsert).onConflictDoNothing();
 
-  console.log("✅ Games and categories seeded.");
+  console.log('✅ Games and categories seeded.');
 }

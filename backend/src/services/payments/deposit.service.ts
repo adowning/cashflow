@@ -1,13 +1,14 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import  db from '@backend/database'
-import { deposits } from '../../database/schema'
-import { getUserWallets } from '../wallet.service'
-import { and, eq, sql } from 'drizzle-orm'
-import { notifyBalanceChange } from '../realtime-notifications.service.js'
-import { logTransaction } from '../transaction-logging.service.js'
-import { addXpToUser } from '../vip.service.js'
-import { creditToWallet } from '../wallet.service.js'
+import  db, { type Deposit } from '@backend/database';
+import { deposits } from '../../database/schema';
+import { getUserWallets } from '../wallet.service';
+import { and, eq, sql } from 'drizzle-orm';
+import { notifyBalanceChange } from '../realtime-notifications.service.js';
+import { logTransaction } from '../transaction-logging.service.js';
+import { addXpToUser } from '../vip.service.js';
+import { creditToWallet } from '../wallet.service.js';
+import { nanoid } from 'nanoid';
 
 /**
  * Enhanced deposit service implementing PRD requirements
@@ -38,7 +39,7 @@ export interface DepositRequest
   paymentMethod: PaymentMethod
   currency?: string
   note?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface DepositResponse
@@ -57,7 +58,7 @@ export interface WebhookConfirmation
   amount: number
   senderInfo?: string
   timestamp: Date
-  providerData?: Record<string, any>
+  providerData?: Record<string, unknown>
 }
 
 export interface DepositCompletionResult
@@ -79,36 +80,37 @@ export async function initiateDeposit(request: DepositRequest): Promise<DepositR
 {
   try {
     // Validate user exists and has active wallet
-    const userWallets = await getUserWallets(request.userId)
-    const user = userWallets[0]
+    const userWallets = await getUserWallets(request.userId);
+    const user = userWallets[0];
     if (!user) {
       return {
         success: false,
         status: DepositStatus.FAILED,
         error: 'User wallet not found'
-      }
+      };
     }
 
     // Generate unique reference ID for tracking
-    const referenceId = `DEP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const referenceId = `DEP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Create deposit record
     const depositId = await db.transaction(async (tx) =>
     {
       const deposit = await tx.insert(deposits).values({
+        id: nanoid(),
         playerId: request.userId,
         amount: request.amount,
         status: DepositStatus.PENDING,
         currency: request.currency || 'USD',
         note: request.note || referenceId
-      }).returning({ id: deposits.id })
-      if (!deposit[0]) throw new Error('no deposits')
+      }).returning({ id: deposits.id });
+      if (!deposit[0]) throw new Error('no deposits');
 
-      return deposit[0].id
-    })
+      return deposit[0].id;
+    });
 
     // Get payment instructions based on method
-    const instructions = await getPaymentInstructions(request.paymentMethod, referenceId, request.amount)
+    const instructions = await getPaymentInstructions(request.paymentMethod, referenceId, request.amount);
 
     return {
       success: true,
@@ -116,15 +118,15 @@ export async function initiateDeposit(request: DepositRequest): Promise<DepositR
       status: DepositStatus.PENDING,
       instructions,
       referenceId
-    }
+    };
 
   } catch (error) {
-    console.error('Deposit initiation failed:', error)
+    console.error('Deposit initiation failed:', error);
     return {
       success: false,
       status: DepositStatus.FAILED,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -142,7 +144,7 @@ export async function processDepositConfirmation(
         eq(deposits.status, DepositStatus.PENDING),
         sql`metadata->>'referenceId' = ${confirmation.transactionId}`
       )
-    })
+    });
 
     if (!pendingDeposit) {
       return {
@@ -150,7 +152,7 @@ export async function processDepositConfirmation(
         depositId: '',
         amount: 0,
         error: 'No pending deposit found for this transaction'
-      }
+      };
     }
 
     const result = await db.transaction(async (tx) =>
@@ -161,29 +163,29 @@ export async function processDepositConfirmation(
           status: DepositStatus.COMPLETED,
           updatedAt: new Date()
         })
-        .where(eq(deposits.id, pendingDeposit.id))
+        .where(eq(deposits.id, pendingDeposit.id));
 
-      if (pendingDeposit.playerId == null) throw new Error('this shouldnt jhappen')
+      if (pendingDeposit.playerId == null) throw new Error('this shouldnt jhappen');
       // Credit user wallet
-      const userWallets = await getUserWallets(pendingDeposit.playerId)
-      const user = userWallets[0]
+      const userWallets = await getUserWallets(pendingDeposit.playerId);
+      const user = userWallets[0];
       if (!user) {
-        throw new Error('User wallet not found')
+        throw new Error('User wallet not found');
       }
 
-      const walletBalance = user
+      const walletBalance = user;
       if (!walletBalance) {
-        throw new Error('Wallet balance not found')
+        throw new Error('Wallet balance not found');
       }
 
       const creditResult = await creditToWallet(
         walletBalance.walletId,
         confirmation.amount,
         'real'
-      )
+      );
 
       if (!creditResult.success) {
-        throw new Error(`Failed to credit wallet: ${creditResult.error}`)
+        throw new Error(`Failed to credit wallet: ${creditResult.error}`);
       }
 
       // Log transaction
@@ -195,15 +197,15 @@ export async function processDepositConfirmation(
         isUserIdUndefined: pendingDeposit.playerId === undefined,
         amount: pendingDeposit.amount,
         status: pendingDeposit.status
-      })
+      });
 
       if (!pendingDeposit.playerId) {
         console.error('CRITICAL: pendingDeposit.playerId is null or undefined!', {
           depositId: pendingDeposit.id,
           transactionId: confirmation.transactionId,
           amount: confirmation.amount
-        })
-        throw new Error('Cannot log transaction: userId is null')
+        });
+        throw new Error('Cannot log transaction: userId is null');
       }
 
       await logTransaction({
@@ -221,23 +223,23 @@ export async function processDepositConfirmation(
         jackpotContribution: 0,
         vipPointsAdded: 0,
         currency: pendingDeposit.currency || 'USD'
-      })
+      });
 
       // Apply deposit bonuses
       const bonusResult = await applyDepositBonuses(
         pendingDeposit.playerId,
         confirmation.amount,
-      )
+      );
 
       return {
         success: true,
         depositId: pendingDeposit.id,
         amount: confirmation.amount,
         bonusApplied: bonusResult
-      }
-    })
+      };
+    });
     if (!pendingDeposit.playerId) {
-      throw new Error(`Failed to credit wallet: `)
+      throw new Error('Failed to credit wallet: ');
     }
 
     // Send real-time balance notification
@@ -247,18 +249,18 @@ export async function processDepositConfirmation(
       totalBalance: result.amount,
       changeAmount: result.amount,
       changeType: 'bonus'
-    })
+    });
 
-    return result
+    return result;
 
   } catch (error) {
-    console.error('Deposit confirmation processing failed:', error)
+    console.error('Deposit confirmation processing failed:', error);
     return {
       success: false,
       depositId: '',
       amount: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -271,20 +273,20 @@ async function getPaymentInstructions(
   amount: number
 ): Promise<string>
 {
-  const amountInDollars = (amount / 100).toFixed(2)
+  const amountInDollars = (amount / 100).toFixed(2);
 
   switch (method) {
     case PaymentMethod.CASHAPP:
-      return `Send $${amountInDollars} via CashApp to $CASHAPP_TAG. Include reference: ${referenceId}`
+      return `Send $${amountInDollars} via CashApp to $CASHAPP_TAG. Include reference: ${referenceId}`;
 
     case PaymentMethod.INSTORE_CASH:
-      return `Visit any participating store location and provide reference: ${referenceId}. Pay $${amountInDollars} in cash.`
+      return `Visit any participating store location and provide reference: ${referenceId}. Pay $${amountInDollars} in cash.`;
 
     case PaymentMethod.INSTORE_CARD:
-      return `Visit any participating store location and provide reference: ${referenceId}. Pay $${amountInDollars} by card.`
+      return `Visit any participating store location and provide reference: ${referenceId}. Pay $${amountInDollars} by card.`;
 
     default:
-      return `Complete payment of $${amountInDollars} using reference: ${referenceId}`
+      return `Complete payment of $${amountInDollars} using reference: ${referenceId}`;
   }
 }
 
@@ -296,38 +298,38 @@ async function applyDepositBonuses(
   amount: number,
 ): Promise<{ xpGained: number; freeSpinsAwarded: number }>
 {
-  let xpGained = 0
-  let freeSpinsAwarded = 0
+  let xpGained = 0;
+  let freeSpinsAwarded = 0;
 
   try {
     // Calculate XP bonus (1 XP per $1 deposited)
-    const xpAmount = Math.floor(amount / 100)
+    const xpAmount = Math.floor(amount / 100);
     if (xpAmount > 0) {
-      const vipResult = await addXpToUser(userId, xpAmount)
+      const vipResult = await addXpToUser(userId, xpAmount);
       if (vipResult.success) {
-        xpGained = xpAmount
+        xpGained = xpAmount;
       }
     }
 
     // Award free spins based on deposit amount
     if (amount >= 10000) { // $100+ deposit
-      freeSpinsAwarded = 10
+      freeSpinsAwarded = 10;
       // TODO: Implement free spins awarding logic
-      console.log(`Awarding ${freeSpinsAwarded} free spins to user ${userId}`)
+      console.log(`Awarding ${freeSpinsAwarded} free spins to user ${userId}`);
     }
 
     // First-time deposit bonus
-    const isFirstDeposit = await checkFirstTimeDeposit(userId)
+    const isFirstDeposit = await checkFirstTimeDeposit(userId);
     if (isFirstDeposit) {
-      freeSpinsAwarded += 20 // Extra 20 free spins for first deposit
-      console.log(`First-time deposit bonus: Additional ${freeSpinsAwarded} free spins`)
+      freeSpinsAwarded += 20; // Extra 20 free spins for first deposit
+      console.log(`First-time deposit bonus: Additional ${freeSpinsAwarded} free spins`);
     }
 
-    return { xpGained, freeSpinsAwarded }
+    return { xpGained, freeSpinsAwarded };
 
   } catch (error) {
-    console.error('Failed to apply deposit bonuses:', error)
-    return { xpGained: 0, freeSpinsAwarded: 0 }
+    console.error('Failed to apply deposit bonuses:', error);
+    return { xpGained: 0, freeSpinsAwarded: 0 };
   }
 }
 
@@ -341,16 +343,16 @@ async function checkFirstTimeDeposit(userId: string): Promise<boolean>
       eq(deposits.playerId, userId),
       eq(deposits.status, DepositStatus.COMPLETED)
     )
-  })
+  });
 
-  return existingDeposits.length === 0
+  return existingDeposits.length === 0;
 }
 
 /**
  * Get deposit status and details
  */
 export async function getDepositStatus(depositId: string): Promise<{
-  deposit?: any
+  deposit?: Deposit
   status: DepositStatus
   error?: string
 } | null>
@@ -358,25 +360,25 @@ export async function getDepositStatus(depositId: string): Promise<{
   try {
     const deposit = await db.query.deposits.findFirst({
       where: eq(deposits.id, depositId)
-    })
+    }) as Deposit | undefined;
 
     if (!deposit) {
       return {
         status: DepositStatus.FAILED,
         error: 'Deposit not found'
-      }
+      };
     }
 
     return {
       deposit,
       status: deposit.status as DepositStatus
-    }
+    };
   } catch (error) {
-    console.error('Failed to get deposit status:', error)
+    console.error('Failed to get deposit status:', error);
     return {
       status: DepositStatus.FAILED,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -388,7 +390,7 @@ export async function getUserDepositHistory(
   limit: number = 50,
   offset: number = 0
 ): Promise<{
-  deposits: any[]
+  deposits: Deposit[]
   total: number
   error?: string
 }>
@@ -399,26 +401,26 @@ export async function getUserDepositHistory(
       orderBy: [sql`${deposits.createdAt} DESC`],
       limit,
       offset
-    })
+    });
 
     const total = await db
       .select({ count: sql<number>`count(*)` })
       .from(deposits)
-      .where(eq(deposits.playerId, userId))
+      .where(eq(deposits.playerId, userId));
 
-    if (!total[0]) throw new Error('no total')
+    if (!total[0]) throw new Error('no total');
 
     return {
       deposits: depositsList,
       total: total[0].count
-    }
+    };
   } catch (error) {
-    console.error('Failed to get deposit history:', error)
+    console.error('Failed to get deposit history:', error);
     return {
       deposits: [],
       total: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }
 
@@ -431,10 +433,10 @@ export async function cleanupExpiredDeposits(): Promise<{
 }>
 {
   try {
-    const expiryHours = 24 // Deposits expire after 24 hours
-    const expiryDate = new Date(Date.now() - expiryHours * 60 * 60 * 1000)
+    const expiryHours = 24; // Deposits expire after 24 hours
+    const expiryDate = new Date(Date.now() - expiryHours * 60 * 60 * 1000);
 
-    const result: any = await db
+    const result: Deposit[] = await db
       .update(deposits)
       .set({
         status: DepositStatus.EXPIRED,
@@ -443,16 +445,16 @@ export async function cleanupExpiredDeposits(): Promise<{
       .where(and(
         eq(deposits.status, DepositStatus.PENDING),
         sql`${deposits.createdAt} < ${expiryDate.toISOString()}`
-      ))
+      ));
 
-    if (!result) throw new Error('no result')
+    if (!result) throw new Error('no result');
 
-    return { cancelled: result.rowCount || 0 }
+    return { cancelled: result.length || 0 };
   } catch (error) {
-    console.error('Failed to cleanup expired deposits:', error)
+    console.error('Failed to cleanup expired deposits:', error);
     return {
       cancelled: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }
+    };
   }
 }

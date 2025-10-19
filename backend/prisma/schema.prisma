@@ -5,9 +5,12 @@ datasource db {
 
 generator drizzle {
   provider        = "prisma-generator-drizzle"
-  // Specify the output file (or directory)
-  output          = "../src/database/schema.ts"
-  relationalQuery = false
+  output          = "../src/database/_schema.ts"
+  relationalQuery = true
+}
+generator drizzle2 {
+  provider        = "drizzle-prisma-generator"
+  output          = "./_schema.ts"
 }
 
 generator typescriptInterfaces {
@@ -15,42 +18,60 @@ generator typescriptInterfaces {
   output      = "../src/database/interfaces.ts"
   jsonType    = "Record<string, unknown>"
   decimalType = "number"
+  modelType	 = "type"
 }
 
+enum Role {
+  USER
+  PLAYER
+  ADMIN
+  VIP
+  MODERATOR
+  SYSTEM
+  OWNER
+  MEMBER
+  OPERATOR
+  SUPPORT_AGENT
+}
 model User {
-  id            String    @id
+  id            String    @id @default(cuid())
   name          String
-  email         String
+  username  String?
+  role    String @default("USER")
+  banned Boolean @default(false)
+  displayUsername String?
+  two_factor_enabled Boolean @default(false)
+  playerId  String? @map("player_id")
+  email         String    @unique
   emailVerified Boolean
-  passwordHash String
+  passwordHash  String     @map("password_hash")
   image         String?
-  createdAt     DateTime
-  updatedAt     DateTime
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @map("updated_at")
   sessions      Session[]
   accounts      Account[]
+  wallets  Wallet[] @relation("UserWallets")
 
-  @@unique([email])
   @@map("user")
 }
 
 model Session {
-  id        String   @id
+  id        String    @id @default(cuid())
   expiresAt DateTime
-  token     String
-  createdAt DateTime
-  updatedAt DateTime
+  token     String    @unique
   ipAddress String?
   userAgent String?
   userId    String
-  playerId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playerId  String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
 
-  @@unique([token])
   @@map("session")
 }
 
 model Account {
-  id                    String    @id
+  id                    String    @id @default(cuid())
   accountId             String
   providerId            String
   userId                String
@@ -62,128 +83,112 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime
-  updatedAt             DateTime
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @map("updated_at")
 
   @@map("account")
 }
 
 model Verification {
-  id         String    @id
+  id         String    @id @default(cuid())
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime?
-  updatedAt  DateTime?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
 
   @@map("verification")
 }
+model jwks {
+  id         String    @id @default(cuid())
+  privateKey       String
+  passpublicKey       String
+  createdAt  DateTime @default(now()) @map("created_at")
+}
 model Player {
-  /// drizzle.default nanoid::nanoid
-  id                       String                   @id 
-  playername               String                   @unique(map: "players_playername_unique")
-  email                    String?                  @unique(map: "players_email_unique")
-  passwordHash             String?                  @map("password_hash")
-  accessToken              String?                  @map("access_token")
-  refreshToken             String?                  @map("refresh_token")
-  accessTokenExpiresAt     DateTime?                @map("access_token_expires_at")
-  refreshTokenExpiresAt    DateTime?                @map("refresh_token_expires_at")
-  currentGameSessionDataId String?                  @unique(map: "players_current_game_session_data_id_unique") @map("current_game_session_data_id")
-  currentAuthSessionDataId String?                  @unique(map: "players_current_auth_session_data_id_unique") @map("current_auth_session_data_id")
-  avatarUrl                String?                  @default("avatar-01") @map("avatar_url")
-  role                     String                   @default("PLAYER")
-  phpId                    Int                      @default(0)
-  isActive                 Boolean                  @default(true) @map("is_active")
-  lastLoginAt              DateTime?                @map("last_login_at")
-  totalXpGained            Int                      @map("total_xp_gained")
-  vipInfoId                String?                  @unique(map: "players_VipInfo_id_unique") @map("vip_info_id")
-  createdAt                DateTime                 @default(now()) @map("created_at")
-  updatedAt                DateTime                 @default(now()) @map("updated_at")
-  deletedAt                DateTime?                @map("deleted_at")
-  lastSeen                 DateTime?                @map("last_seen")
-  rtgBlockTime             Int                      @default(0) @map("rtg_block_time")
-  phone                    String?                  @unique(map: "players_phone_unique")
-  path                     String[]                 @default([])
-  invitorId                String?                  @map("invitor_id")
-  avatar                   String                   @default("avatar-01.webp")
-  status                   Status                   @default(ACTIVE)
-  count_balance            Int                      @default(0) @map("count_balance")
-  count_tournaments        Int                      @default(0) @map("count_tournaments")
-  count_happyhours         Int                      @default(0) @map("count_happyhours")
-  count_refunds            Int                      @default(0) @map("count_refunds")
-  count_progress           Int                      @default(0) @map("count_progress")
-  count_daily_entries      Int                      @default(0) @map("count_daily_entries")
-  count_invite             Int                      @default(0) @map("count_invite")
-  count_welcomebonus       Int                      @default(0) @map("count_welcomebonus")
-  count_smsbonus           Int                      @default(0) @map("count_smsbonus")
-  count_wheelfortune       Int                      @default(0) @map("count_wheelfortune")
-  address                  Int                      @default(0)
-  // authSessions             AuthSessions[]
-  // blackjackBets            BlackjackBets[]
-  deposits                 Deposits[]
-  // favoriteGames            FavoriteGames[]
-  // gameHistory              GameHistory[]
+  id                       String                  @id @default(cuid())
+  playername               String                  @unique(map: "players_playername_unique")
+  email                    String?                 @unique(map: "players_email_unique")
+  passwordHash             String?                 @map("password_hash")
+  accessToken              String?                 @map("access_token")
+  refreshToken             String?                 @map("refresh_token")
+  accessTokenExpiresAt     DateTime?               @map("access_token_expires_at")
+  refreshTokenExpiresAt    DateTime?               @map("refresh_token_expires_at")
+  currentGameSessionDataId String?                 @unique(map: "players_current_game_session_data_id_unique") @map("current_game_session_data_id")
+  currentAuthSessionDataId String?                 @unique(map: "players_current_auth_session_data_id_unique") @map("current_auth_session_data_id")
+  avatarUrl                String?                 @default("avatar-01") @map("avatar_url")
+  role                     String                  @default("PLAYER")
+  phpId                    Int                     @default(0)
+  isActive                 Boolean                 @default(true) @map("is_active")
+  lastLoginAt              DateTime?               @map("last_login_at")
+  totalXpGained            Int                     @map("total_xp_gained")
+  vipInfoId                String?                 @unique(map: "players_VipInfo_id_unique") @map("vip_info_id")
+  deletedAt                DateTime?               @map("deleted_at")
+  lastSeen                 DateTime?               @map("last_seen")
+  rtgBlockTime             Int                     @default(0) @map("rtg_block_time")
+  phone                    String?                 @unique(map: "players_phone_unique")
+  path                     String[]                @default([])
+  invitorId                String?                 @map("invitor_id")
+  avatar                   String                  @default("avatar-01.webp")
+  status                   Status                  @default(ACTIVE)
+  count_balance            Int                     @default(0) @map("count_balance")
+  count_tournaments        Int                     @default(0) @map("count_tournaments")
+  count_happyhours         Int                     @default(0) @map("count_happyhours")
+  count_refunds            Int                     @default(0) @map("count_refunds")
+  count_progress           Int                     @default(0) @map("count_progress")
+  count_daily_entries      Int                     @default(0) @map("count_daily_entries")
+  count_invite             Int                     @default(0) @map("count_invite")
+  count_welcomebonus       Int                     @default(0) @map("count_welcomebonus")
+  count_smsbonus           Int                     @default(0) @map("count_smsbonus")
+  count_wheelfortune       Int                     @default(0) @map("count_wheelfortune")
+  address                  Int                     @default(0)
+  deposits                 Deposit[]
   gameSessions             GameSessions[]
   jackpotWins              JackpotWins[]
-  // jackpots                 Jackpots[]
-  // tournamentParticipants   TournamentParticipants[]
-  // This is the NEW part: An explicit foreign key to the active wallet.
-  // The @unique constraint ensures a wallet can only be the active one for a single player.
-  // activeWalletId String?   @unique @map("active_wallet_id")
+  Jackpots                 Jackpots[]
+  activeWalletId           String?                 @unique @map("active_wallet_id")
   loyaltyFundTransactions  LoyaltyFundTransaction[]
-  // RELATION 1: A direct one-to-one link to the single active wallet.
-  // This is what you will use in your Drizzle query.
-  // activeWallet   Wallets?  @relation("ActiveWalletForPlayer", fields: [activeWalletId], references: [id], onDelete: SetNull)
-  // sentConversations        Conversation[]           @relation("SenderConversations")
-  // receivedConversations    Conversation[]           @relation("ReceiverConversations")
-  // sentMessages             Message[]                @relation("SenderMessages")
-  // receivedMessages         Message[]                @relation("ReceiverMessages")
-  // RELATION 2: The existing one-to-many link to ALL wallets owned by the player.
-  wallets                  Wallet[]
-  // wallets_players_active_wallet_idTowallets wallets?                  @relation("players_active_wallet_idTowallets", fields: [activeWalletId], references: [id], map: "players_active_wallet_id_wallets_id_fk")
+  // activeWallet             Wallet?                 @relation("ActiveWalletForPlayer", fields: [activeWalletId], references: [id], onDelete: SetNull)
+  // wallets                  Wallet[]
   vipInfo                  VipInfo?
-  // wallets_wallets_player_idToplayers          wallets[]                 @relation("wallets_player_idToplayers")
   withdrawals              Withdrawal[]
-  // operators                               operators[]
-  activeOperatorId         String?                  @map("active_operator_id") //@unique(map: "players_active_operator_id_unique" )
-  activeWalletId           String?                  @map("active_wallet_id") //@unique(map: "players_active_operator_id_unique" )
-  ops                      Operators?               @relation(fields: [activeOperatorId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "favorite_player_operators_id_active_operator_id_fk")
+  activeOperatorId         String?                 @map("active_operator_id")
+  ops                      Operators?              @relation(fields: [activeOperatorId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "favorite_player_operators_id_active_operator_id_fk")
   inviteCode               String?
   operatorSwitchHistory    OperatorSwitchHistory[]
   vipCashbacks             VipCashback[]
   vipLevelUpBonuses        VipLevelUpBonus[]
   vipSpinRewards           VipSpinReward[]
-  affiliateLogsInvited     AffiliateLog[]           @relation("Invitor")
-  affiliateLogsReferred    AffiliateLog[]           @relation("Child")
+  affiliateLogsInvited     AffiliateLog[]          @relation("Invitor")
+  affiliateLogsReferred    AffiliateLog[]          @relation("Child")
   referralCodes            ReferralCode[]
-  // balances                 Balance[]
-  PlayerBonus              PlayerBonus[]            @relation(map: "player_bonuses_player_id_players_id_fk")
+  PlayerBonus              PlayerBonus[]           @relation(map: "player_bonuses_player_id_players_id_fk")
+  createdAt                DateTime               @default(now()) @map("created_at")
+  updatedAt                DateTime               @default(now()) @map("updated_at")
 
   @@map("players")
 }
 
-model Deposits {
-  /// drizzle.default nanoid::nanoid
-  id         String    @id @db.VarChar
-  playerId   String?   @map("player_id") @db.VarChar
-  amount     Int?
-  status     String?
-  idNumber   String?   @map("id_number")
-  firstName  String?   @map("first_name")
-  lastName   String?   @map("last_name")
+model Deposit {
+  id        String    @id @default(cuid()) @db.VarChar
+  playerId  String?   @map("player_id") @db.VarChar
+  amount    Int?
+  status    String?
+  idNumber  String?   @map("id_number")
+  firstName String?   @map("first_name")
+  lastName  String?   @map("last_name")
   channelsId String?   @map("channels_id")
-  note       String?
-  currency   String?
-  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt  DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
-  players    Player?   @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "deposits_player_id_players_id_fk")
+  note      String?
+  currency  String?
+  players   Player?   @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "deposit_player_id_players_id_fk")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp(6)
 
-  @@map("deposits")
+  @@map("deposit")
 }
 
 model GameSessions {
-  /// drizzle.default nanoid::nanoid
-  id              String        @id @db.VarChar
+  id              String        @id @default(cuid()) @db.VarChar
   authSessionId   String        @map("auth_session_id")
   playerId        String        @map("player_id")
   gameId          String?       @map("game_id")
@@ -193,167 +198,54 @@ model GameSessions {
   totalWon        Int           @default(0) @map("total_won")
   totalXpGained   Int           @default(0) @map("total_xp_gained")
   rtp             Int?          @default(0)
-  // phpGameData     Json?         @map("php_game_data")
   duration        Int           @default(0)
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   endAt           DateTime?     @map("end_at") @db.Timestamptz(6)
   startingBalance Int           @default(0) @map("starting_balance")
-  // authSessions    AuthSessions  @relation(fields: [authSessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "game_sessions_auth_session_id_auth_sessions_id_fk")
   players         Player        @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "game_sessions_player_id_players_id_fk")
   game            Games?        @relation(fields: [gameId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "game_sessions_game_id_games_id_fk")
   expiredTime     DateTime?     @map("expired_time") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @default(now()) @map("updated_at")
 
   @@index([authSessionId], map: "game_session_auth_session_idx")
   @@index([playerId], map: "game_session_player_idx")
   @@map("game_sessions")
 }
 
-// model GameSpins {
-//   /// drizzle.default nanoid::nanoid
-//   id                        String                 @id @db.VarChar
-//   playerName                String?                @map("player_name")
-//   gameName                  String?                @map("game_name")
-//   gameId                    String?                @map("game_id")
-//   spinData                  String?                @map("spin_data")
-//   grossWinAmount            Float                  @map("gross_win_amount")
-//   wagerAmount               Float                  @map("wager_amount")
-//   spinNumber                Int?                   @default(0) @map("spin_number")
-//   playerAvatar              String?                @map("player_avatar")
-//   currencyId                String?                @map("currency_id")
-//   sessionId                 String                 @map("session_id")
-//   playerId                    String?                @map("player_id")
-//   createdAt                 DateTime               @default(now()) @map("created_at")
-//   updatedAt                 DateTime               @default(now()) @map("updated_at")
-//   occurredAt                DateTime               @map("occurred_at")
-//   sessionDataId             String?
-//   type                      String?
-//   operatorId                String?                @map("operator_id")
-//   status                    String?
-//   playerBalanceAtStart      Int                    @default(0) @map("player_balance_at_start")
-//   playerBalance             Int                    @default(0) @map("player_balance")
-//   gamePlayerWinTotalTodayid Int                    @default(0) @map("game_player_win_total_todayid")
-//   playerBetTotalToday       Int                    @default(0) @map("player_bet_total_today")
-//   sessionTotalWinAmount     Int                    @default(0) @map("session_total_win_amount")
-//   sessionTotalBetAmount     Int                    @default(0) @map("session_total_bet_amount")
-//   gameSessionRtp            Int                    @default(0) @map("game_session_rtp")
-//   playerRtpToday            Int                    @default(0) @map("player_rtp_today")
-//   winAmount                 Int                    @default(0) @map("win_amount")
-//   betAmount                 Int                    @default(0) @map("bet_amount")
-//   jackpotContributions      JackpotContributions[]
-//   jackpotWins               JackpotWins?
 
-//   @@map("game_spins")
-// }
-
-// model StandardSpin {
-//   /// drizzle.default nanoid::nanoid
-//   id              String  @id @db.VarChar
-//   spinData        String? @map("spin_data")
-//   spinBoilerplate String  @map("spin_boilerplate")
-//   spinNumber      Int     @default(0) @map("spin_number")
-//   developer       String
-//   nsf             Boolean @default(false) @map("insufficient_funds")
-//   gameId          String? @map("game_id")
-//   gameName        String? @map("game_name")
-
-//   @@map("standard_spins")
-// }
-
-model Games {
-  /// drizzle.default nanoid::nanoid
-  id                           String   @id @db.VarChar
-  name                         String   @unique
-  title                        String?
-  // configuration        Json?
-  description                  String?
-  category                     String?  @default("slots")
-  tags                         String?
-  thumbnailUrl                 String?  @map("thumbnail_url")
-  bannerUrl                    String?  @map("banner_url")
-  developer                    String
-  providerId                   String?  @map("provider_id")
-  totalWagered                 Int?     @map("total_wagered")
-  totalWon                     Int?     @map("total_won")
-  // goldsvetData Json?          @map("goldsvet_data")
-  targetRtp                    Int      @default(90) @map("target_rtp")
-  isFeatured                   Boolean? @map("is_featured")
-  statIn                       Int?     @default(0) @map("stat_in")
-  statOut                      Int?     @default(0) @map("stat_out")
-  isActive                     Boolean? @default(true) @map("is_active")
-  operatorId                   String?  @map("operator_id")
-  version                      String?
-  jpgIds                       String[] @map("jpg_ids")
-  isHorizontal                 Boolean? @default(false)
-  jpgId                        String?  @map("jpg_id")
-  label                        String?  @map("label")
-  device                       Int?     @map("device")
-  gamebank                     String?  @map("gamebank")
-  linesPercentConfigSpin       String?  @map("lines_percent_config_spin")
-  linesPercentConfigSpinBonus  String?  @map("lines_percent_config_spin_bonus")
-  linesPercentConfigBonus      String?  @map("lines_percent_config_bonus")
-  linesPercentConfigBonusBonus String?  @map("lines_percent_config_bonus_bonus")
-  rezerv                       String?  @map("rezerv")
-  cask                         String?  @map("cask")
-  advanced                     String?  @map("advanced")
-  bet                          String?  @map("bet")
-  scaleMode                    String?  @map("scale_mode")
-  slotViewState                String?  @map("slot_view_state")
-  view                         String?  @map("view")
-  denomination                 String?  @map("denomination")
-  categoryTemp                 String?  @map("category_temp")
-  originalId                   String?  @map("original_id")
-  bids                         String[] @map("bids")
-  rtpStatIn                    Int?     @map("rtp_stat_in")
-  rtpStatOut                   Int?     @map("rtp_stat_out")
-  currentRtp                   String?  @map("current_rtp")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @map("updated_at")
-  status    Int?     @default(0)
-
-  operators    Operators?     @relation(fields: [operatorId], references: [id], map: "games_operator_fkey")
-  // rtgSettingsResponses RtgSettingsResponses[]
-  // rtgSpinResults       RtgSpinResults[]
-  gameSessions GameSessions[] @relation(map: "game_sessions_game_id_games_id_fk")
-
-  @@map("games")
-}
 
 model JackpotContributions {
-  /// drizzle.default nanoid::nanoid
-  id                      String   @id @db.VarChar
+  id                      String   @id @default(cuid()) @db.VarChar
   jackpotId               String   @map("jackpot_id")
   playerId                String?  @map("player_id")
   gameSpinId              String   @map("game_spin_id")
   contributionAmountCoins Int      @map("contribution_amount_coins")
-  createdAt               DateTime @default(now()) @map("created_at")
-  // gameSpins               GameSpins @relation(fields: [gameSpinId], references: [id], onDelete: Cascade, map: "jackpot_contributions_gameSpin_fkey")
   jackpots                Jackpots @relation(fields: [jackpotId], references: [id], onDelete: Cascade, map: "jackpot_contributions_jackpot_fkey")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @default(now()) @map("updated_at")
 
   @@unique([jackpotId, gameSpinId], map: "JackpotContribution_jackpotId_gameSpinId_key")
   @@map("jackpot_contributions")
 }
 
 model JackpotWins {
-  /// drizzle.default nanoid::nanoid
-  id             String   @id @db.VarChar
-  jackpotId      String   @map("jackpot_id")
-  winnerId       String   @map("winner_id")
-  winAmountCoins Int      @map("win_amount_coins")
-  gameSpinId     String   @unique(map: "jackpot_wins_game_spin_id_unique") @map("game_spin_id")
-  transactionId  String?  @map("transaction_id")
+  id             String    @id @default(cuid()) @db.VarChar
+  jackpotId      String    @map("jackpot_id")
+  winnerId       String    @map("winner_id")
+  winAmountCoins Int       @map("win_amount_coins")
+  gameSpinId     String    @unique(map: "jackpot_wins_game_spin_id_unique") @map("game_spin_id")
+  transactionId  String?   @map("transaction_id")
+  sessionDataId  String?   @map("session_data_id")
+  jackpots       Jackpots  @relation(fields: [jackpotId], references: [id], onDelete: Cascade, map: "jackpot_wins_jackpot_fkey")
+  player         Player    @relation(fields: [winnerId], references: [id], onDelete: Cascade, map: "jackpot_wins_winner_fkey")
   createdAt      DateTime @default(now()) @map("created_at")
-  sessionDataId  String?  @map("session_data_id")
-  // gameSpins      GameSpins @relation(fields: [gameSpinId], references: [id], onDelete: Cascade, map: "jackpot_wins_gameSpin_fkey")
-  jackpots       Jackpots @relation(fields: [jackpotId], references: [id], onDelete: Cascade, map: "jackpot_wins_jackpot_fkey")
-  player         Player   @relation(fields: [winnerId], references: [id], onDelete: Cascade, map: "jackpot_wins_winner_fkey")
+  updatedAt      DateTime @default(now()) @map("updated_at")
 
   @@map("jackpot_wins")
 }
 
 model Jackpots {
-  /// drizzle.default nanoid::nanoid
-  id                            String                 @id @db.VarChar
+  id                            String                 @id @default(cuid()) @db.VarChar
   type                          String
   currentAmountCoins            Int                    @map("current_amount_coins")
   percent                       Int                    @default(1)
@@ -368,69 +260,65 @@ model Jackpots {
   lastWonAt                     DateTime?              @map("last_won_at")
   lastWonBy                     String?                @map("last_won_by")
   isActive                      Boolean                @default(true) @map("is_active")
-  createdAt                     DateTime               @default(now()) @map("created_at")
-  updatedAt                     DateTime               @default(now()) @map("updated_at")
   jackpotContributions          JackpotContributions[]
   jackpotWins                   JackpotWins[]
   lastContribution              Int?
+  players                       Player?                @relation(fields: [lastWonBy], references: [id], map: "jackpots_lastWinner_fkey")
+  createdAt                     DateTime              @default(now()) @map("created_at")
+  updatedAt                     DateTime              @default(now()) @map("updated_at")
 
-  // players                         Player?                 @relation(fields: [lastWonBy], references: [id], map: "jackpots_lastWinner_fkey")
   @@map("jackpots")
 }
 
 model Operators {
-  /// drizzle.default nanoid::nanoid
-  id                       String                   @id @db.VarChar
-  name                     String                   @unique(map: "operators_name_unique")
-  operatorSecret           String                   @map("operator_secret")
-  operatorAccess           String                   @map("operator_access")
-  callbackUrl              String                   @map("callback_url")
-  isActive                 Boolean                  @default(true) @map("is_active")
-  allowedIps               String                   @map("allowed_ips")
+  id                       String                  @id @default(cuid()) @db.VarChar
+  name                     String                  @unique(map: "operators_name_unique")
+  operatorSecret           String                  @map("operator_secret")
+  operatorAccess           String                  @map("operator_access")
+  callbackUrl              String                  @map("callback_url")
+  isActive                 Boolean                 @default(true) @map("is_active")
+  allowedIps               String                  @map("allowed_ips")
   description              String?
-  productIds               String?                  @map("product_ids")
+  productIds               String?                 @map("product_ids")
   balance                  Int
-  netRevenue               Int                      @default(0) @map("net_revenue")
-  acceptedPayments         String[]                 @map("accepted_payments")
-  ownerId                  String?                  @map("owner_id")
-  lastUsedAt               DateTime?                @map("last_used_at")
-  createdAt                DateTime                 @default(now()) @map("created_at")
-  updatedAt                DateTime                 @default(now()) @map("updated_at")
-  // goldsvetData             Json[]                   @map("goldsvet_data")
+  netRevenue               Int                     @default(0) @map("net_revenue")
+  acceptedPayments         String[]                @map("accepted_payments")
+  ownerId                  String?                 @map("owner_id")
+  lastUsedAt               DateTime?               @map("last_used_at")
   games                    Games[]
   products                 Products[]
   players                  Player[]
-  // New GGR fields
-  upfrontBankCredits       Int                      @default(10000) @map("upfront_bank_credits")
-  platformFeeRate          String                   @default("0.1500") @map("platform_fee_rate")
-  loyaltyContributionRate  String                   @default("0.0500") @map("loyalty_contribution_rate")
-  // Relations to new tables
+  upfrontBankCredits       Int                     @default(10000) @map("upfront_bank_credits")
+  platformFeeRate          String                  @default("0.1500") @map("platform_fee_rate")
+  loyaltyContributionRate  String                  @default("0.0500") @map("loyalty_contribution_rate")
   settlements              OperatorSettlement[]
   loyaltyFundContributions LoyaltyFundTransaction[]
-  switchedFromHistory      OperatorSwitchHistory[]  @relation("SwitchedFrom")
-  switchedToHistory        OperatorSwitchHistory[]  @relation("SwitchedTo")
+  switchedFromHistory      OperatorSwitchHistory[] @relation("SwitchedFrom")
+  switchedToHistory        OperatorSwitchHistory[] @relation("SwitchedTo")
   wallets                  Wallet[]
+  createdAt                DateTime               @default(now()) @map("created_at")
+  updatedAt                DateTime               @default(now()) @map("updated_at")
 
   @@map("operators")
 }
 
 model OperatorSwitchHistory {
-  /// drizzle.default nanoid::nanoid
-  id             String     @id @db.VarChar
+  id             String     @id @default(cuid()) @db.VarChar
   playerId       String     @map("player_id")
-  fromOperatorId String?    @map("from_operator_id") // Nullable for the very first operator selection
+  fromOperatorId String?    @map("from_operator_id")
   toOperatorId   String     @map("to_operator_id")
   switchedAt     DateTime   @default(now()) @map("switched_at")
   player         Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
   fromOperator   Operators? @relation("SwitchedFrom", fields: [fromOperatorId], references: [id], onDelete: SetNull)
   toOperator     Operators  @relation("SwitchedTo", fields: [toOperatorId], references: [id], onDelete: Cascade)
+  createdAt      DateTime?  @default(now()) @map("created_at")
+  updatedAt      DateTime?  @default(now()) @map("updated_at")
 
   @@map("operator_switch_history")
 }
 
 model Products {
-  /// drizzle.default nanoid::nanoid
-  id                       String         @id @db.VarChar
+  id                       String         @id @default(cuid()) @db.VarChar
   title                    String         @default("default")
   productType              String         @default("bundle") @map("product_type")
   bonusTotalInCredits      Int            @map("bonus_total_in_credits")
@@ -443,17 +331,16 @@ model Products {
   isPromo                  Boolean?       @map("is_promo")
   totalDiscountInCents     Int            @map("total_discount_in_cents")
   operatorId               String?        @map("operator_id")
-  createdAt                DateTime       @default(now()) @map("created_at")
-  updatedAt                DateTime       @default(now()) @map("updated_at")
   operators                Operators?     @relation(fields: [operatorId], references: [id], onDelete: Cascade, map: "products_operator_fkey")
-  transactions             Transactions[]
+  transactions             Transaction[]
+  createdAt                DateTime     @default(now()) @map("created_at")
+  updatedAt                DateTime      @default(now()) @map("updated_at")
 
   @@map("products")
 }
 
-model Transactions {
-  /// drizzle.default nanoid::nanoid
-  id                  String    @id @db.VarChar
+model Transaction {
+  id                  String    @id @default(cuid()) @db.VarChar
   processedAt         DateTime? @map("processed_at")
   walletId            String?   @map("wallet_id")
   type                String
@@ -475,73 +362,60 @@ model Transactions {
   provider            String?
   providerTxId        String?   @map("provider_tx_id")
   relatedGameId       String?   @map("related_game_id")
+  gameName       String?   @map("game_name")
   relatedRoundId      String?   @map("related_round_id")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @default(now()) @map("updated_at")
   operatorId          String?   @map("operator_id")
   playerId            String    @map("player_id")
   products            Products? @relation(fields: [productId], references: [id], map: "transactions_product_fkey")
   wallets             Wallet?   @relation(fields: [walletId], references: [id], onDelete: Cascade, map: "transactions_wallet_fkey")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @map("updated_at")
 
   @@map("transactions")
 }
 
-
 model ReferralCode {
-  id             String   @id
-  code           String   @unique
-  name           String?  @default("")
-  commissionRate Float    @map("commission_rate")
+  id             String    @id @default(cuid())
+  code           String    @unique
+  name           String?   @default("")
+  commissionRate Float     @map("commission_rate")
+  playerId       String    @map("player_id")
+  player         Player    @relation(fields: [playerId], references: [id])
   createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  // Foreign key relationship to the Player model
-  playerId       String   @map("player_id")
-  player         Player   @relation(fields: [playerId], references: [id])
+  updatedAt      DateTime @default(now()) @map("updated_at")
 
   @@map("referral_codes")
 }
 
 model Wallet {
-  /// drizzle.default nanoid::nanoid
-  id            String         @id @db.VarChar
+  id            String         @id @default(cuid()) @db.VarChar
   balance       Int            @default(0)
   paymentMethod String         @default("INSTORE_CASH") @map("payment_method")
   currency      String         @default("USD")
-  // isActive      Boolean        @default(true) @map("is_active")
-  // isDefault     Boolean        @map("is_default")
   address       String?        @unique(map: "wallets_address_unique")
   cashtag       String?        @unique(map: "wallets_cashtag_unique")
   operatorId    String         @map("operator_id")
   operator      Operators      @relation(fields: [operatorId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wallets_operator_fkey")
   lastUsedAt    DateTime?      @map("last_used_at")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @default(now()) @map("updated_at")
-  transactions  Transactions[]
+  transactions  Transaction[]
   balances      Balance[]      @relation("WalletBalances")
+  userId      String         @map("user_id")
+  isActive      Boolean        @default(false)
+  activeForUser User         @relation(name: "UserWallets", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wallets_user_fkey")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @default(now()) @map("updated_at")
 
-  // players_players_active_wallet_idTowallets players?         @relation("players_active_wallet_idTowallets")
-  // players_wallets_player_idToplayers          players          @relation("wallets_player_idToplayers", fields: [playerId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wallets_player_id_players_id_fk")
-  playerId String  @map("player_id")
-  // players         Player?         @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "withdrawals_player_id_players_id_fk")
-  // This is the standard foreign key that makes every wallet belong to a player.
-  // This is the back-relation for the one-to-many link (player.wallets)
-  // player          Player     @relation("AllWalletsForPlayer", fields: [playerId], references: [id], onDelete: Cascade)
-  player   Player  @relation(fields: [playerId], references: [id])
-  isActive Boolean @default(false)
-
-  // // This is the back-relation for the one-to-one link (player.activeWallet)
-  // activeForPlayer Player?    @relation("ActiveWalletForPlayer")
-  @@unique([playerId, isActive])
-  @@unique([playerId, operatorId], map: "wallets_player_operator_unique")
+  // @@unique([userId, isActive])
+  // @@unique([userId, operatorId], map: "wallets_user_operator_unique")
   @@map("wallets")
 }
 
 model Withdrawal {
-  /// drizzle.default nanoid::nanoid
-  id           String    @id @db.VarChar
+  id           String    @id @default(cuid()) @db.VarChar
   playerId     String?   @map("player_id") @db.VarChar
   amount       Int?
   status       String?
+  // metadata   Bytes?    // <-- Add this line
   idNumber     String?   @map("id_number")
   firstName    String?   @map("first_name")
   lastName     String?   @map("last_name")
@@ -549,15 +423,15 @@ model Withdrawal {
   note         String?
   currencyType String?   @map("currency_type")
   currency     String?
-  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
   players      Player?   @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "withdrawals_player_id_players_id_fk")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamp(6)
 
   @@map("withdrawals")
 }
 
 model VipRank {
-  id                   Int        @id
+  id                   String     @id @default(cuid())
   name                 String     @unique(map: "VipRank_name_unique")
   minXp                Int        @unique(map: "VipRank_minXp_unique") @map("min_xp")
   icon                 String     @unique(map: "icon") @default("/images/vip/rank1.avif")
@@ -572,74 +446,79 @@ model VipRank {
   isInvitationOnly     Boolean    @map("is_invitation_only")
   vipInfo              VipInfo[]
   levels               VipLevel[]
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @default(now()) @map("updated_at")
 
   @@map("vip_ranks")
 }
 
 model VipInfo {
-  /// drizzle.default nanoid::nanoid
-  id            String   @id @db.VarChar
-  level         Int      @default(1)
+  id            String    @id @default(cuid()) @db.VarChar
+  level         Int       @default(1)
   xp            Int
-  totalXp       Int      @map("total_xp")
-  playerId      String   @unique(map: "VipInfo_playerId_unique") @map("player_id")
-  currentRankid Int?     @map("current_rankid")
+  totalXp       Int       @map("total_xp")
+  playerId      String    @unique(map: "VipInfo_playerId_unique") @map("player_id")
+  currentRankid String?   @map("current_rankid")
+  vipRank       VipRank?  @relation(fields: [currentRankid], references: [id], onDelete: Cascade, map: "VipInfo_currentRank_fkey")
+  players       Player    @relation(fields: [playerId], references: [id], onDelete: Cascade, map: "VipInfo_player_fkey")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @default(now()) @map("updated_at")
-  vipRank       VipRank? @relation(fields: [currentRankid], references: [id], onDelete: Cascade, map: "VipInfo_currentRank_fkey")
-  players       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, map: "VipInfo_player_fkey")
 
-  // vipLevelUpHistory VipLevelUpHistory[]
   @@map("vip_info")
 }
 
 model VipLevel {
-  id                  String   @id @default(cuid())
-  parentId            Int      @map("parent_id")
-  minXpNeeded         Int?     @default(0) @map("min_xp_needed")
-  levelNumber         Int?     @default(0) @map("level_number")
-  levelName           String   @map("level_name")
-  parent              VipRank  @relation(fields: [parentId], references: [id])
-  spinBonusMultiplier Float?   @default(0.1) @map("spin_bonus_multiplier_id")
-  setting             Setting? @relation(fields: [settingId], references: [id])
-  settingId           Int?     @map("setting_id")
-  levelUpBonusAmount  Int?     @map("level_up_bonus_amount")
+  id                  String    @id @default(cuid())
+  parentId            String    @map("parent_id")
+  minXpNeeded         Int?      @default(0) @map("min_xp_needed")
+  levelNumber         Int?      @default(0) @map("level_number")
+  levelName           String    @map("level_name")
+  parent              VipRank   @relation(fields: [parentId], references: [id])
+  spinBonusMultiplier Float?    @default(0.1) @map("spin_bonus_multiplier_id")
+  setting             Setting?  @relation(fields: [settingId], references: [id])
+  settingId           String?   @map("setting_id")
+  levelUpBonusAmount  Int?      @map("level_up_bonus_amount")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @map("updated_at")
 
   @@map("vip_levels")
 }
 
 model VipCashback {
-  id        String   @id @default(cuid())
-  playerId  String?  @map("player_id")
+  id        String    @id @default(cuid())
+  playerId  String?   @map("player_id")
   amount    Int
   currency  String
-  tiersName String   @map("tiers_name")
+  tiersName String    @map("tiers_name")
   type      String
+  player    Player?   @relation(fields: [playerId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
-  player    Player?  @relation(fields: [playerId], references: [id])
+  updatedAt DateTime @default(now()) @map("updated_at")
 
   @@map("vip_cashback")
 }
 
 model VipLevelUpBonus {
-  id        String   @id @default(cuid())
-  playerId  String   @map("player_id")
+  id        String    @id @default(cuid())
+  playerId  String    @map("player_id")
   amount    Int
-  levelName String   @map("level_name")
-  levelXp   Int      @map("level_xp")
+  levelName String    @map("level_name")
+  levelXp   Int       @map("level_xp")
+  player    Player    @relation(fields: [playerId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
-  player    Player   @relation(fields: [playerId], references: [id])
+  updatedAt DateTime @default(now()) @map("updated_at")
 
   @@map("vip_level_up_bonus")
 }
 
 model VipSpinReward {
-  id        String   @id @default(cuid())
-  playerId  String   @map("player_id")
+  id        String    @id @default(cuid())
+  playerId  String    @map("player_id")
   amount    Int
   currency  String
+  player    Player    @relation(fields: [playerId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
-  player    Player   @relation(fields: [playerId], references: [id])
+  updatedAt DateTime @default(now()) @map("updated_at")
 
   @@map("vip_spin_rewards")
 }
@@ -649,17 +528,17 @@ model Affiliate {
   playername   String      @unique
   firstName    String      @map("first_name")
   lastName     String      @map("last_name")
-  status       String // active, inactive, blocked
+  status       String
   email        String      @unique
-  role         String // admin, player
+  role         String
   referralCode String      @unique @map("referral_code")
   parentId     String?     @map("parent_id")
   path         String[]    @default([])
   password     String
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
   parent       Affiliate?  @relation("AffiliateTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children     Affiliate[] @relation("AffiliateTree")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @map("updated_at")
 
   @@map("affiliates")
 }
@@ -677,44 +556,106 @@ model AffiliateLog {
   referralAmount      Float    @default(0) @map("referral_amount")
   referralWager       Float    @default(0) @map("referral_wager")
   lastVipLevelAmount  Float    @default(0) @map("last_vip_level_amount")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
   invitor             Player   @relation("Invitor", fields: [invitorId], references: [id])
   child               Player   @relation("Child", fields: [childId], references: [id])
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @map("updated_at")
 
   @@map("affiliate_logs")
 }
-
 model Setting {
-  id                     Int         @id @default(autoincrement())
+  id                     String      @id @default(cuid())
   name                   String      @default("setting")
   referralCodeCount      Int         @default(20) @map("referral_code_count")
   referralCommissionRate Float       @default(0.25) @map("referral_commission_rate")
   rates                  String      @default("[{\"USD\": 1}]")
-  // One-to-many relationship with VipLevel
-  vipLevels              VipLevel[]
-  // One-to-one relationship with Commission
   commission             Commission?
-  createdAt              DateTime    @default(now()) @map("created_at")
-  updatedAt              DateTime    @updatedAt @map("updated_at")
+  
+  // Configuration service JSON fields
+  jackpotConfig          Json?       @map("jackpot_config")
+  gameGroups             Json?       @map("game_groups") 
+  vipConfig              Json?       @map("vip_config")
+  wageringConfig         Json?       @map("wagering_config")
+  systemLimits           Json?       @map("system_limits")
+  
+  vipLevels              VipLevel[]
+  createdAt              DateTime   @default(now()) @map("created_at")
+  updatedAt              DateTime   @default(now()) @map("updated_at")
 
   @@map("settings")
 }
 
+
+model Games {
+  id                           String         @id @default(cuid()) @db.VarChar
+  name                         String         @unique
+  title                        String?
+  description                  String?
+  category                     String?        @default("slots")
+  tags                         String?
+  thumbnailUrl                 String?        @map("thumbnail_url")
+  bannerUrl                    String?        @map("banner_url")
+  developer                    String
+  providerId                   String?        @map("provider_id")
+  totalWagered                 Int?           @map("total_wagered")
+  totalWon                     Int?           @map("total_won")
+  targetRtp                    Int            @default(90) @map("target_rtp")
+  isFeatured                   Boolean?       @map("is_featured")
+  statIn                       Int?           @default(0) @map("stat_in")
+  statOut                      Int?           @default(0) @map("stat_out")
+  isActive                     Boolean?       @default(true) @map("is_active")
+  operatorId                   String?        @map("operator_id")
+  version                      String?
+  jpgIds                       String[]       @map("jpg_ids")
+  isHorizontal                 Boolean?       @default(false)
+  jpgId                        String?        @map("jpg_id")
+  label                        String?        @map("label")
+  device                       Int?           @map("device")
+  gamebank                     String?        @map("gamebank")
+  linesPercentConfigSpin       String?        @map("lines_percent_config_spin")
+  linesPercentConfigSpinBonus  String?        @map("lines_percent_config_spin_bonus")
+  linesPercentConfigBonus      String?        @map("lines_percent_config_bonus")
+  linesPercentConfigBonusBonus String?        @map("lines_percent_config_bonus_bonus")
+  rezerv                       String?        @map("rezerv")
+  cask                         String?        @map("cask")
+  advanced                     String?        @map("advanced")
+  bet                          String?        @map("bet")
+  scaleMode                    String?        @map("scale_mode")
+  slotViewState                String?        @map("slot_view_state")
+  view                         String?        @map("view")
+  denomination                 String?        @map("denomination")
+  categoryTemp                 String?        @map("category_temp")
+  originalId                   String?        @map("original_id")
+  bids                         String[]       @map("bids")
+  rtpStatIn                    Int?           @map("rtp_stat_in")
+  rtpStatOut                   Int?           @map("rtp_stat_out")
+  currentRtp                   String?        @map("current_rtp")
+  status                       Int?           @default(0)
+  state                        Boolean?       @default(true)
+  operators                    Operators?     @relation(fields: [operatorId], references: [id], map: "games_operator_fkey")
+  gameSessions                 GameSessions[] @relation(map: "game_sessions_game_id_games_id_fk")
+  createdAt                    DateTime      @default(now()) @map("created_at")
+  updatedAt                    DateTime      @default(now()) @map("updated_at")
+
+  @@map("games")
+}
+
+
 model Commission {
-  id           Int     @id @default(autoincrement())
-  master       Float   @default(30)
-  affiliate    Float   @default(20)
-  subAffiliate Float   @default(10) @map("sub_affiliate")
-  // Foreign key for the one-to-one relationship
-  settingId    Int     @unique @map("setting_id")
-  setting      Setting @relation(fields: [settingId], references: [id])
+  id           String    @id @default(cuid())
+  master       Float     @default(30)
+  affiliate    Float     @default(20)
+  subAffiliate Float     @default(10) @map("sub_affiliate")
+  settingId    String    @unique @map("setting_id")
+  setting      Setting   @relation(fields: [settingId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @map("updated_at")
 
   @@map("commissions")
 }
 
 model OperatorSettlement {
-  id                      String    @id @default(nanoid())
+  id                      String    @id @default(cuid())
   operatorId              String    @map("operator_id")
   weekStartDate           DateTime  @map("week_start_date")
   weekEndDate             DateTime  @map("week_end_date")
@@ -724,64 +665,43 @@ model OperatorSettlement {
   platformFee             Float     @map("platform_fee") @db.DoublePrecision
   loyaltyFundContribution Float     @map("loyalty_fund_contribution") @db.DoublePrecision
   netToOperator           Float     @map("net_to_operator") @db.DoublePrecision
-  createdAt               DateTime  @default(now()) @map("created_at")
   operator                Operators @relation(fields: [operatorId], references: [id])
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @default(now()) @map("updated_at")
 
   @@map("operator_settlements")
 }
 
 model LoyaltyFundTransaction {
-  id                   String                     @id @default(nanoid())
+  id                   String                     @id @default(cuid())
   type                 LoyaltyFundTransactionType
   amount               Float                      @db.DoublePrecision
   description          String?
   operatorId           String?                    @map("operator_id")
   playerId             String?                    @map("player_id")
   relatedTransactionId String?                    @map("related_transaction_id")
-  createdAt            DateTime                   @default(now()) @map("created_at")
   operator             Operators?                 @relation(fields: [operatorId], references: [id])
   player               Player?                    @relation(fields: [playerId], references: [id])
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                 @default(now()) @map("updated_at")
 
   @@map("loyalty_fund_transactions")
 }
 
-// model FishBank {
-//   id         String @id @default(nanoid())
-//   fish       Int    @default(0)
-//   gamebankId Int    @map("gamebank_id")
-//   operatorId String @map("shop_id")
-
-//   @@index([operatorId])
-//   @@map("fish_bank")
-// }
-
-// model GameBank {
-//   id         String @id @default(nanoid())
-//   slots      Int    @default(0)
-//   little     Int    @default(0)
-//   tableBank  Int    @default(0) @map("table_bank")
-//   bonus      Int    @default(0)
-//   tempRtp    Int?   @map("temp_rtp") // Nullable because the default was "NULL"
-//   operatorId String @map("shop_id")
-
-//   @@index([operatorId])
-//   @@map("game_bank")
-// }
-
 model Balance {
-  id           String   @id @default(nanoid())
-  playerId     String   @map("player_id")
-  currencyId   String   @map("currency_id")
-  walletId     String?  @map("wallet_id")
-  amount       Int      @default(0)
-  bonus        Int      @default(0)
-  turnover     Int      @default(0)
-  withdrawable Int      @default(0)
-  pending      Int      @default(0)
+  id           String    @id @default(cuid())
+  playerId     String    @map("player_id")
+  currencyId   String    @map("currency_id")
+  walletId     String?   @map("wallet_id")
+  amount       Int       @default(0)
+  bonus        Int       @default(0)
+  turnover     Int       @default(0)
+  withdrawable Int       @default(0)
+  pending      Int       @default(0)
+  wallet       Wallet?   @relation("WalletBalances", fields: [walletId], references: [id])
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @map("updated_at")
-  // player         Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  wallet       Wallet?  @relation("WalletBalances", fields: [walletId], references: [id])
+
   @@map("balances")
 }
 
@@ -794,7 +714,7 @@ enum BonusStatus {
 }
 
 model PlayerBonus {
-  id            String      @id @default(uuid())
+  id            String      @id @default(cuid())
   playerId      String      @map("player_id")
   bonusId       String      @map("bonus_id")
   amount        Int         @default(0)
@@ -802,38 +722,36 @@ model PlayerBonus {
   goalAmount    Int         @map("goal_amount")
   betsIds       String[]    @map("bets_ids")
   status        BonusStatus @default(pending)
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-
-  player Player @relation(fields: [playerId], references: [id], map: "player_bonuses_player_id_players_id_fk")
-  bonus  Bonus  @relation(fields: [bonusId], references: [id], map: "player_bonuses_bonus_id_bonuses_id_fk")
+  player        Player      @relation(fields: [playerId], references: [id], map: "player_bonuses_player_id_players_id_fk")
+  bonus         Bonus       @relation(fields: [bonusId], references: [id], map: "player_bonuses_bonus_id_bonuses_id_fk")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @default(now()) @map("updated_at")
 
   @@index([playerId, bonusId, status], name: "player_bonuses_search_idx")
   @@map("player_bonuses")
 }
 
 model Bonus {
-  id             String   @id @default(uuid())
-  name           String   @db.VarChar(255)
+  id             String        @id @default(cuid())
+  name           String        @db.VarChar(255)
   description    String
-  option         String   @db.VarChar(100)
+  option         String        @db.VarChar(100)
   percent        Int
   multiply       Int
-  bonusCap       Int      @map("bonus_cap")
-  minBet         Int      @map("min_bet")
-  maxBet         Int      @map("max_bet")
+  bonusCap       Int           @map("bonus_cap")
+  minBet         Int           @map("min_bet")
+  maxBet         Int           @map("max_bet")
   slot           Boolean
   casino         Boolean
   status         Boolean
-  autoCalc       Boolean  @map("auto_calc")
-  expireDate     DateTime @map("expire_date")
-  isExpired      Boolean  @default(false) @map("is_expired")
-  banner         String   @db.VarChar(500)
-  particularData String?  @map("particular_data")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  playerBonuses PlayerBonus[]
+  autoCalc       Boolean       @map("auto_calc")
+  expireDate     DateTime      @map("expire_date")
+  isExpired      Boolean       @default(false) @map("is_expired")
+  banner         String        @db.VarChar(500)
+  particularData String?       @map("particular_data")
+  playerBonuses  PlayerBonus[]
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @default(now()) @map("updated_at")
 
   @@index([name], name: "bonuses_name_idx")
   @@index([status], name: "bonuses_status_idx")
@@ -841,7 +759,6 @@ model Bonus {
   @@map("bonuses")
 }
 
-// Enums derived from CHECK constraints in your SQL
 enum SystemEnum {
   player
   shop
@@ -873,85 +790,28 @@ enum ProgressTypeEnum {
   sum_pay
 }
 
-// // Models refactored to use camelCase and mapped to original table names
-// model Statistic {
-//   id             String          @id @default(nanoid())
-//   title          String?         @db.VarChar(255)
-//   playerId         Int             @map("player_id")
-//   agentIn        Int?            @map("agent_in")
-//   agentOut       Int?            @map("agent_out")
-//   distributorIn  Int?            @map("distributor_in")
-//   distributorOut Int?            @map("distributor_out")
-//   typeIn         Int?            @map("type_in")
-//   typeOut        Int?            @map("type_out")
-//   creditIn       Int?            @map("credit_in")
-//   creditOut      Int?            @map("credit_out")
-//   moneyIn        Int?            @map("money_in")
-//   moneyOut       Int?            @map("money_out")
-//   // statisticId    Int    @map("statistic_id")
-//   payeerId       Int?            @map("payeer_id")
-//   system         SystemEnum?
-//   old            Int
-//   sum            Int
-//   sum2           Int
-//   hhMultiplier   Int             @default(1) @map("hh_multiplier")
-//   type           TypeEnum        @default(add)
-//   itemId         String?         @map("item_id") @db.VarChar(55)
-//   status         Int             @default(1)
-//   ipAddress      String?         @map("ip_address") @db.VarChar(255)
-//   playerAgent      String?         @map("player_agent") @db.VarChar(550)
-//   country        String?         @db.VarChar(255)
-//   city           String?         @db.VarChar(255)
-//   os             String?         @db.VarChar(255)
-//   device         String?         @db.VarChar(255)
-//   browser        String?         @db.VarChar(255)
-//   operatorId     String          @map("operator_id")
-//   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
-//   updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamp(0)
-//   statisticsAdd  StatisticsAdd[]
-
-//   @@map("statistic")
-// }
-
 model Progress {
-  id         String           @id @default(nanoid())
-  sum        Float            @default(0) @db.DoublePrecision
-  type       ProgressTypeEnum
-  spins      Int              @default(0)
-  bet        Float            @db.DoublePrecision
-  rating     Int
-  bonus      Float            @default(0) @db.DoublePrecision
-  day        String           @db.VarChar(55)
-  min        Int
-  max        Int
-  percent    Float            @db.DoublePrecision
-  minBalance Float            @map("min_balance") @db.DoublePrecision
-  wager      Int
-  daysActive Int              @default(5) @map("days_active")
-  status     Int              @default(1)
-  operatorId String           @map("operator_id")
+  id          String           @id @default(cuid())
+  sum         Float            @default(0) @db.DoublePrecision
+  type        ProgressTypeEnum
+  spins       Int              @default(0)
+  bet         Float            @db.DoublePrecision
+  rating      Int
+  bonus       Float            @default(0) @db.DoublePrecision
+  day         String           @db.VarChar(55)
+  min         Int
+  max         Int
+  percent     Float            @db.DoublePrecision
+  minBalance  Float            @map("min_balance") @db.DoublePrecision
+  wager       Int
+  daysActive  Int              @default(5) @map("days_active")
+  status      Int              @default(1)
+  operatorId  String           @map("operator_id")
+  createdAt   DateTime?        @default(now()) @map("created_at")
+  updatedAt   DateTime?        @default(now()) @map("updated_at")
 
   @@map("progres")
 }
-
-// model StatisticsAdd {
-//   id             String    @id @default(nanoid())
-//   agentIn        Float?    @map("agent_in")
-//   agentOut       Float?    @map("agent_out")
-//   distributorIn  Float?    @map("distributor_in")
-//   distributorOut Float?    @map("distributor_out")
-//   typeIn         Float?    @map("type_in")
-//   typeOut        Float?    @map("type_out")
-//   creditIn       Float?    @map("credit_in")
-//   creditOut      Float?    @map("credit_out")
-//   moneyIn        Float?    @map("money_in")
-//   moneyOut       Float?    @map("money_out")
-//   statisticId    String    @map("statistic_id")
-//   playerId         Int       @map("player_id")
-//   operatorId     Statistic @relation(fields: [statisticId], references: [id])
-
-//   @@map("statistics_add")
-// }
 
 enum LoyaltyFundTransactionType {
   CONTRIBUTION
@@ -997,17 +857,6 @@ enum Status {
   BANNED
 }
 
-enum Role {
-  PLAYER
-  ADMIN
-  VIP
-  MODERATOR
-  SYSTEM
-  OWNER
-  MEMBER
-  OPERATOR
-  SUPPORT_AGENT
-}
 
 enum TournamentStatus {
   PENDING
