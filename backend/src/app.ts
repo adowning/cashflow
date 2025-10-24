@@ -7,7 +7,7 @@ import { join } from 'path';
 import createApp from './lib/create-app';
 import configureOpenAPI from './lib/configure-open-api';
 import { authRoutes } from './services/auth/auth.router';
-import { gameRoutes } from './services/games/games.router';
+import { getAllGamesRoute } from './services/games/games.router';
 import { userRoutes } from './services/user/routes/user.router';
 import { dashboardRoutes } from './services/dashboard/dashboard.router';
 
@@ -56,22 +56,29 @@ configureOpenAPI(app);
 
 // --- API ROUTING ---
 // Create a separate Hono instance for API routes for clear separation
-const api =  createApp();
+// const api =  createApp();
 
-const modules = [
-  userRoutes,
-  authRoutes,
-  gameRoutes,
-  dashboardRoutes,
+const routes = [
+  // userRoutes,
+  // authRoutes,
+  getAllGamesRoute,
+  // dashboardRoutes,
 ] as const;
 
 // Register all API modules under the /api base path
-modules.forEach((route) => {
-  api.route('/', route);
+// const routes = []
+routes.forEach((route) => {
+  // app.route('/', route);
+    // app.basePath("/api").route("/", route);
+
 });
+// const routes = app.route('/auth', authRoutes).route('/games', gameRoutes).route('/users', userRoutes).route('/dashboard', dashboardRoutes)
 
 // Mount the API router to the main app instance
-app.route('/api', api);
+// app.route('/api', routes);
+
+export type AppType = typeof app;
+
 console.log('[DEBUG] API routes registered under /api.');
 
 
@@ -85,8 +92,7 @@ console.log('[DEBUG] Static file serving registered.');
 
 
 // Export types for external use
-export type AppType = (typeof modules)[number];
-export type ApplicationType = typeof app;
+// export type AppType = typeof modules//modules)[number];
 
 // Function to download the OpenAPI specification
 async function downloadOpenAPISpec()

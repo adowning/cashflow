@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @stylistic/indent */
+ 
 import moment from 'moment';
-import bcrypt from 'bcryptjs';
 // //import { RootFilterQuery, UpdateQuery } from 'mongoose';
 // models
 
@@ -57,7 +56,7 @@ export const createUser = async (data: ICreateUser) => {
 };
 
 export const updatePassword = async (id: string, password: string) => {
-     const newPassword = await bcrypt.hash(password, 8);
+     const newPassword = await Bun.password.hash(password);
     return await User.findOneAndUpdate({ _id: id }, { password: newPassword });
 };
 

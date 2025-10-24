@@ -1,7 +1,27 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
+    "jsx": "preserve",
+    "moduleDetection": "force",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "forceConsistentCasingInFileNames": true,
+    "erasableSyntaxOnly": false,
+    "composite": true,
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "baseUrl": "./",
     "paths": {
       "@/*": [
@@ -11,6 +31,21 @@
         "src/*"
       ]
     },
-    "types": []
-  }
+    "types": [],
+  },
+  "references": [
+    {
+      "path": "../backend/tsconfig.json"
+    }
+  ],
+    "exclude": [
+    "**/dist/**",
+    "**/data/**",
+    "**/node_modules/**",
+    "**/*.config.*",
+    "**/*.cjs",
+    "**/*.mjs",
+    "**/*.js",
+    "**/misc/**"
+  ]
 }

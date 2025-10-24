@@ -256,14 +256,16 @@ export const getAllGamesRoute = createRoute({
     ),
     [HttpStatusCodes.BAD_REQUEST]: jsonContent(badRequestSchema, 'Bad Request'),
   },
-});
+},
 
-const router = createRouter();
+)
+
+// const router = createRouter();
 
 // Public routes - no authentication or session required
 // router.openapi(getAllGames, controller.getAllGames);
 // router.openapi(getGameCategories, controller.getGameCategories as any)
-router.openapi(getAllGamesRoute, controller.getAllGames);
+// router.openapi(getAllGamesRoute, controller.getAllGames);
 // Routes that require authentication but not a game session
 // router.openapi(searchGames, controller.searchGames);
 // router.openapi(getUserGames, controller.getUserGames as any)

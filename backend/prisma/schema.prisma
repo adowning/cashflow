@@ -8,10 +8,10 @@ generator drizzle {
   output          = "../src/database/_schema.ts"
   relationalQuery = true
 }
-generator drizzle2 {
-  provider        = "drizzle-prisma-generator"
-  output          = "./_schema.ts"
-}
+// generator drizzle2 {
+//   provider        = "drizzle-prisma-generator"
+//   output          = "./_schema.ts"
+// }
 
 generator typescriptInterfaces {
   provider    = "prisma-generator-typescript-interfaces"
@@ -33,45 +33,49 @@ enum Role {
   OPERATOR
   SUPPORT_AGENT
 }
+
 model User {
-  id            String    @id @default(cuid())
+  id            String       @id
   name          String
-  username  String?
-  role    String @default("USER")
-  banned Boolean @default(false)
-  displayUsername String?
-  two_factor_enabled Boolean @default(false)
-  playerId  String? @map("player_id")
-  email         String    @unique
+  email         String
   emailVerified Boolean
-  passwordHash  String     @map("password_hash")
   image         String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @default(now()) @map("updated_at")
+  createdAt     DateTime
+  updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
-  wallets  Wallet[] @relation("UserWallets")
 
+  role       String?
+  banned     Boolean?
+  banReason  String?
+  banExpires DateTime?
+
+  @@unique([email])
+  @@index([email])
   @@map("user")
 }
 
 model Session {
-  id        String    @id @default(cuid())
-  expiresAt DateTime
-  token     String    @unique
-  ipAddress String?
-  userAgent String?
-  userId    String
-  playerId  String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @map("updated_at")
+  id                   String   @id
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime
+  updatedAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
 
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
   @@map("session")
 }
 
 model Account {
-  id                    String    @id @default(cuid())
+  id                    String    @id
   accountId             String
   providerId            String
   userId                String
@@ -83,14 +87,17 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @default(now()) @map("updated_at")
+  createdAt             DateTime
+  updatedAt             DateTime
 
+  @@index([userId])
   @@map("account")
 }
 
+
 model Verification {
-  id         String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id             String    @id @default(cuid())
   identifier String
   value      String
   expiresAt  DateTime
@@ -100,13 +107,15 @@ model Verification {
   @@map("verification")
 }
 model jwks {
-  id         String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id             String    @id @default(cuid())
   privateKey       String
   passpublicKey       String
   createdAt  DateTime @default(now()) @map("created_at")
 }
 model Player {
-  id                       String                  @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                           String                  @id @default(cuid())
   playername               String                  @unique(map: "players_playername_unique")
   email                    String?                 @unique(map: "players_email_unique")
   passwordHash             String?                 @map("password_hash")
@@ -148,8 +157,7 @@ model Player {
   Jackpots                 Jackpots[]
   activeWalletId           String?                 @unique @map("active_wallet_id")
   loyaltyFundTransactions  LoyaltyFundTransaction[]
-  // activeWallet             Wallet?                 @relation("ActiveWalletForPlayer", fields: [activeWalletId], references: [id], onDelete: SetNull)
-  // wallets                  Wallet[]
+  wallets  Wallet[] @relation("PlayerWallets")
   vipInfo                  VipInfo?
   withdrawals              Withdrawal[]
   activeOperatorId         String?                 @map("active_operator_id")
@@ -170,7 +178,8 @@ model Player {
 }
 
 model Deposit {
-  id        String    @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id            String    @id @default(cuid()) @db.VarChar
   playerId  String?   @map("player_id") @db.VarChar
   amount    Int?
   status    String?
@@ -188,7 +197,8 @@ model Deposit {
 }
 
 model GameSessions {
-  id              String        @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                  String        @id @default(cuid()) @db.VarChar
   authSessionId   String        @map("auth_session_id")
   playerId        String        @map("player_id")
   gameId          String?       @map("game_id")
@@ -215,7 +225,8 @@ model GameSessions {
 
 
 model JackpotContributions {
-  id                      String   @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                          String   @id @default(cuid()) @db.VarChar
   jackpotId               String   @map("jackpot_id")
   playerId                String?  @map("player_id")
   gameSpinId              String   @map("game_spin_id")
@@ -229,7 +240,8 @@ model JackpotContributions {
 }
 
 model JackpotWins {
-  id             String    @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                 String    @id @default(cuid()) @db.VarChar
   jackpotId      String    @map("jackpot_id")
   winnerId       String    @map("winner_id")
   winAmountCoins Int       @map("win_amount_coins")
@@ -245,7 +257,8 @@ model JackpotWins {
 }
 
 model Jackpots {
-  id                            String                 @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                                String                 @id @default(cuid()) @db.VarChar
   type                          String
   currentAmountCoins            Int                    @map("current_amount_coins")
   percent                       Int                    @default(1)
@@ -271,7 +284,8 @@ model Jackpots {
 }
 
 model Operators {
-  id                       String                  @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                           String                  @id @default(cuid()) @db.VarChar
   name                     String                  @unique(map: "operators_name_unique")
   operatorSecret           String                  @map("operator_secret")
   operatorAccess           String                  @map("operator_access")
@@ -303,7 +317,8 @@ model Operators {
 }
 
 model OperatorSwitchHistory {
-  id             String     @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                 String     @id @default(cuid()) @db.VarChar
   playerId       String     @map("player_id")
   fromOperatorId String?    @map("from_operator_id")
   toOperatorId   String     @map("to_operator_id")
@@ -318,7 +333,8 @@ model OperatorSwitchHistory {
 }
 
 model Products {
-  id                       String         @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                           String         @id @default(cuid()) @db.VarChar
   title                    String         @default("default")
   productType              String         @default("bundle") @map("product_type")
   bonusTotalInCredits      Int            @map("bonus_total_in_credits")
@@ -340,7 +356,8 @@ model Products {
 }
 
 model Transaction {
-  id                  String    @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                      String    @id @default(cuid()) @db.VarChar
   processedAt         DateTime? @map("processed_at")
   walletId            String?   @map("wallet_id")
   type                String
@@ -375,7 +392,8 @@ model Transaction {
 }
 
 model ReferralCode {
-  id             String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                 String    @id @default(cuid())
   code           String    @unique
   name           String?   @default("")
   commissionRate Float     @map("commission_rate")
@@ -388,7 +406,8 @@ model ReferralCode {
 }
 
 model Wallet {
-  id            String         @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                String         @id @default(cuid()) @db.VarChar
   balance       Int            @default(0)
   paymentMethod String         @default("INSTORE_CASH") @map("payment_method")
   currency      String         @default("USD")
@@ -399,9 +418,9 @@ model Wallet {
   lastUsedAt    DateTime?      @map("last_used_at")
   transactions  Transaction[]
   balances      Balance[]      @relation("WalletBalances")
-  userId      String         @map("user_id")
+  playerId      String         @map("player_id")
   isActive      Boolean        @default(false)
-  activeForUser User         @relation(name: "UserWallets", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wallets_user_fkey")
+  activeForPlayer Player         @relation(name: "PlayerWallets", fields: [playerId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wallets_player_fkey")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @default(now()) @map("updated_at")
 
@@ -411,7 +430,8 @@ model Wallet {
 }
 
 model Withdrawal {
-  id           String    @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id               String    @id @default(cuid()) @db.VarChar
   playerId     String?   @map("player_id") @db.VarChar
   amount       Int?
   status       String?
@@ -431,7 +451,8 @@ model Withdrawal {
 }
 
 model VipRank {
-  id                   String     @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                       String     @id @default(cuid())
   name                 String     @unique(map: "VipRank_name_unique")
   minXp                Int        @unique(map: "VipRank_minXp_unique") @map("min_xp")
   icon                 String     @unique(map: "icon") @default("/images/vip/rank1.avif")
@@ -453,7 +474,8 @@ model VipRank {
 }
 
 model VipInfo {
-  id            String    @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                String    @id @default(cuid()) @db.VarChar
   level         Int       @default(1)
   xp            Int
   totalXp       Int       @map("total_xp")
@@ -468,7 +490,8 @@ model VipInfo {
 }
 
 model VipLevel {
-  id                  String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                      String    @id @default(cuid())
   parentId            String    @map("parent_id")
   minXpNeeded         Int?      @default(0) @map("min_xp_needed")
   levelNumber         Int?      @default(0) @map("level_number")
@@ -485,7 +508,8 @@ model VipLevel {
 }
 
 model VipCashback {
-  id        String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id            String    @id @default(cuid())
   playerId  String?   @map("player_id")
   amount    Int
   currency  String
@@ -499,7 +523,8 @@ model VipCashback {
 }
 
 model VipLevelUpBonus {
-  id        String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id            String    @id @default(cuid())
   playerId  String    @map("player_id")
   amount    Int
   levelName String    @map("level_name")
@@ -512,7 +537,8 @@ model VipLevelUpBonus {
 }
 
 model VipSpinReward {
-  id        String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id            String    @id @default(cuid())
   playerId  String    @map("player_id")
   amount    Int
   currency  String
@@ -524,7 +550,8 @@ model VipSpinReward {
 }
 
 model Affiliate {
-  id           String      @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id               String      @id @default(cuid())
   playername   String      @unique
   firstName    String      @map("first_name")
   lastName     String      @map("last_name")
@@ -544,7 +571,8 @@ model Affiliate {
 }
 
 model AffiliateLog {
-  id                  String   @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                      String   @id @default(cuid())
   invitorId           String   @map("invitor_id")
   childId             String   @map("child_id")
   currency            String
@@ -564,7 +592,8 @@ model AffiliateLog {
   @@map("affiliate_logs")
 }
 model Setting {
-  id                     String      @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                         String      @id @default(cuid())
   name                   String      @default("setting")
   referralCodeCount      Int         @default(20) @map("referral_code_count")
   referralCommissionRate Float       @default(0.25) @map("referral_commission_rate")
@@ -587,7 +616,8 @@ model Setting {
 
 
 model Games {
-  id                           String         @id @default(cuid()) @db.VarChar
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                               String         @id @default(cuid()) @db.VarChar
   name                         String         @unique
   title                        String?
   description                  String?
@@ -609,29 +639,8 @@ model Games {
   jpgIds                       String[]       @map("jpg_ids")
   isHorizontal                 Boolean?       @default(false)
   jpgId                        String?        @map("jpg_id")
-  label                        String?        @map("label")
-  device                       Int?           @map("device")
-  gamebank                     String?        @map("gamebank")
-  linesPercentConfigSpin       String?        @map("lines_percent_config_spin")
-  linesPercentConfigSpinBonus  String?        @map("lines_percent_config_spin_bonus")
-  linesPercentConfigBonus      String?        @map("lines_percent_config_bonus")
-  linesPercentConfigBonusBonus String?        @map("lines_percent_config_bonus_bonus")
-  rezerv                       String?        @map("rezerv")
-  cask                         String?        @map("cask")
-  advanced                     String?        @map("advanced")
-  bet                          String?        @map("bet")
-  scaleMode                    String?        @map("scale_mode")
-  slotViewState                String?        @map("slot_view_state")
-  view                         String?        @map("view")
-  denomination                 String?        @map("denomination")
-  categoryTemp                 String?        @map("category_temp")
-  originalId                   String?        @map("original_id")
-  bids                         String[]       @map("bids")
-  rtpStatIn                    Int?           @map("rtp_stat_in")
-  rtpStatOut                   Int?           @map("rtp_stat_out")
-  currentRtp                   String?        @map("current_rtp")
-  status                       Int?           @default(0)
-  state                        Boolean?       @default(true)
+  /// [GoldsvetData]
+  goldsvetData                 Json?          @map("goldsvet_data")
   operators                    Operators?     @relation(fields: [operatorId], references: [id], map: "games_operator_fkey")
   gameSessions                 GameSessions[] @relation(map: "game_sessions_game_id_games_id_fk")
   createdAt                    DateTime      @default(now()) @map("created_at")
@@ -642,7 +651,8 @@ model Games {
 
 
 model Commission {
-  id           String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id               String    @id @default(cuid())
   master       Float     @default(30)
   affiliate    Float     @default(20)
   subAffiliate Float     @default(10) @map("sub_affiliate")
@@ -655,7 +665,8 @@ model Commission {
 }
 
 model OperatorSettlement {
-  id                      String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                          String    @id @default(cuid())
   operatorId              String    @map("operator_id")
   weekStartDate           DateTime  @map("week_start_date")
   weekEndDate             DateTime  @map("week_end_date")
@@ -673,7 +684,8 @@ model OperatorSettlement {
 }
 
 model LoyaltyFundTransaction {
-  id                   String                     @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                       String                     @id @default(cuid())
   type                 LoyaltyFundTransactionType
   amount               Float                      @db.DoublePrecision
   description          String?
@@ -689,7 +701,8 @@ model LoyaltyFundTransaction {
 }
 
 model Balance {
-  id           String    @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id               String    @id @default(cuid())
   playerId     String    @map("player_id")
   currencyId   String    @map("currency_id")
   walletId     String?   @map("wallet_id")
@@ -714,7 +727,8 @@ enum BonusStatus {
 }
 
 model PlayerBonus {
-  id            String      @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                String      @id @default(cuid())
   playerId      String      @map("player_id")
   bonusId       String      @map("bonus_id")
   amount        Int         @default(0)
@@ -732,7 +746,8 @@ model PlayerBonus {
 }
 
 model Bonus {
-  id             String        @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id                 String        @id @default(cuid())
   name           String        @db.VarChar(255)
   description    String
   option         String        @db.VarChar(100)
@@ -791,7 +806,8 @@ enum ProgressTypeEnum {
 }
 
 model Progress {
-  id          String           @id @default(cuid())
+  /// drizzle.default @paralleldrive/cuid2::createId
+  id              String           @id @default(cuid())
   sum         Float            @default(0) @db.DoublePrecision
   type        ProgressTypeEnum
   spins       Int              @default(0)

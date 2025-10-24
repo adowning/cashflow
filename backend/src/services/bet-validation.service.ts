@@ -1,10 +1,10 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
 
-import { and, eq, gte, sql } from 'drizzle-orm'
-import { checkWalletBalance, getUserWallets } from './wallet.service'
-import db from '../database'
-import { players, gameSessions, games, , session } from '../database/schema'
+import { and, eq, gte, sql } from 'drizzle-orm';
+import { checkWalletBalance, getUserWallets } from './wallet.service';
+import db from '../database';
+import { players, gameSessions, games, session } from '../database/schema';
 
 /**
  * Bet validation service for comprehensive pre-bet checks
@@ -46,39 +46,39 @@ export async function validateBet(
 {
   try {
     // 1. Validate user session
-    const sessionValidation = await validateUserSession(request.userId)
+    const sessionValidation = await validateUserSession(request.userId);
     if (!sessionValidation.valid) {
-      return sessionValidation
+      return sessionValidation;
     }
-    console.log(`sessionValidation : ${sessionValidation.valid}`)
+    console.log(`sessionValidation : ${sessionValidation.valid}`);
     // 2. Validate game session and eligibility
-    const gameValidation = await validateGameSession(request)
+    const gameValidation = await validateGameSession(request);
     if (!gameValidation.valid) {
-      return gameValidation
+      return gameValidation;
     }
-    console.log(`gameValidation : ${gameValidation.valid}`)
+    console.log(`gameValidation : ${gameValidation.valid}`);
 
     // 3. Validate game availability and limits
-    const gameLimitsValidation = await validateGameLimits(request)
+    const gameLimitsValidation = await validateGameLimits(request);
     if (!gameLimitsValidation.valid) {
-      return gameLimitsValidation
+      return gameLimitsValidation;
     }
-    console.log(`gameLimitsValidation : ${gameLimitsValidation.valid}`)
+    console.log(`gameLimitsValidation : ${gameLimitsValidation.valid}`);
 
     // 4. Validate wager amount limits
-    const wagerValidation = await validateWagerAmount(request)
+    const wagerValidation = await validateWagerAmount(request);
     if (!wagerValidation.valid) {
-      return wagerValidation
+      return wagerValidation;
     }
-    console.log(`wagerValidation : ${wagerValidation.valid}`)
+    console.log(`wagerValidation : ${wagerValidation.valid}`);
 
     // 5. Validate balance sufficiency
-    const balanceValidation = await validateBalance(request)
+    const balanceValidation = await validateBalance(request);
     if (!balanceValidation.valid) {
-      return balanceValidation
+      return balanceValidation;
     }
-    console.log(`balanceValidation : ${balanceValidation.valid}`)
-    console.log('All validations passed')
+    console.log(`balanceValidation : ${balanceValidation.valid}`);
+    console.log('All validations passed');
 
     // All validations passed
     return {
@@ -87,13 +87,13 @@ export async function validateBet(
       availableBalance: balanceValidation.availableBalance,
       game: gameValidation.game,
       session: sessionValidation.session,
-    }
+    };
   } catch (error) {
-    console.error('Bet validation error:', error)
+    console.error('Bet validation error:', error);
     return {
       valid: false,
       reason: 'Validation system error',
-    }
+    };
   }
 }
 
@@ -113,44 +113,44 @@ async function validateUserSession(
         },
       },
     },
-  })
+  });
 
   if (!user) {
-    return { valid: false, reason: 'User not found' }
+    return { valid: false, reason: 'User not found' };
   }
 
   // User status check would need to be implemented based on actual user schema
   // For now, assuming all users are active if they exist
 
   // Check for active auth session
-  console.log('Available sessions columns:', Object.keys(gameSessions))
-  console.log('Checking for active auth session for userId:', userId)
-  let session
+  console.log('Available sessions columns:', Object.keys(gameSessions));
+  console.log('Checking for active auth session for userId:', userId);
+  let session;
   if (process.env.NODE_ENV === 'development') {
     session = await db.query.gameSessions.findFirst({
       where: and(
         eq(gameSessions.playerId, userId),
         // gte(gameSessions.expiredTime, new Date())
       ),
-    })
+    });
   } else {
     session = await db.query.gameSessions.findFirst({
       where: and(
         eq(gameSessions.playerId, userId),
         gte(gameSessions.expiredTime, new Date())
       ),
-    })
+    });
   }
-  console.log('Found session:', session ? 'yes' : 'no')
+  console.log('Found session:', session ? 'yes' : 'no');
 
   if (!session) {
-    return { valid: false, reason: 'No active session found' }
+    return { valid: false, reason: 'No active session found' };
   }
 
   return {
     valid: true,
     session,
-  }
+  };
 }
 
 /**
@@ -167,10 +167,10 @@ async function validateGameSession(
       gte(games.status, 0) // 0 = ACTIVE (confirmed by user)
       // eq(games.state, true),
     ),
-  })
+  });
 
   if (!game) {
-    return { valid: false, reason: 'Game not found or inactive' }
+    return { valid: false, reason: 'Game not found or inactive' };
   }
 
   const gameSession = await db.query.gameSessions.findFirst({
@@ -179,17 +179,17 @@ async function validateGameSession(
       eq(gameSessions.gameId, request.gameId),
       eq(gameSessions.status, 'ACTIVE')
     ),
-  })
+  });
 
   if (!gameSession) {
-    return { valid: false, reason: 'No active game session found' }
+    return { valid: false, reason: 'No active game session found' };
   }
 
   return {
     valid: true,
     game,
     session: gameSession,
-  }
+  };
 }
 
 /**
@@ -201,33 +201,33 @@ async function validateGameLimits(
 {
   const game = await db.query.games.findFirst({
     where: eq(games.id, request.gameId),
-  })
+  });
 
   if (!game) {
-    return { valid: false, reason: 'Game not found' }
+    return { valid: false, reason: 'Game not found' };
   }
 
   // Check game-specific wager limits (these would typically come from game configuration)
   const gameLimits: GameLimits = {
     minBet: 100, // 1.00 in cents - should be configurable per game
     maxBet: 100000, // 1000.00 in cents - should be configurable per game
-  }
+  };
 
   if (request.wagerAmount < gameLimits.minBet) {
     return {
       valid: false,
       reason: `Minimum bet is $${gameLimits.minBet / 100}`,
-    }
+    };
   }
 
   if (request.wagerAmount > gameLimits.maxBet) {
     return {
       valid: false,
       reason: `Maximum bet is $${gameLimits.maxBet / 100}`,
-    }
+    };
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
@@ -245,26 +245,26 @@ async function validateWagerAmount(
   //     activeWallet: true
   //   },
   // })
-  const userWallets = await getUserWallets(request.userId)
-  const user = userWallets[0]
+  const userWallets = await getUserWallets(request.userId);
+  const user = userWallets[0];
 
   if (!user) {
-    return { valid: false, reason: 'User wallet not found' }
+    return { valid: false, reason: 'User wallet not found' };
   }
 
   // Check daily loss limit (configurable per user/VIP level)
-  const dailyLossValidation = await validateDailyLossLimit(request)
+  const dailyLossValidation = await validateDailyLossLimit(request);
   if (!dailyLossValidation.valid) {
-    return dailyLossValidation
+    return dailyLossValidation;
   }
 
   // Check session loss limit
-  const sessionLossValidation = await validateSessionLossLimit(request)
+  const sessionLossValidation = await validateSessionLossLimit(request);
   if (!sessionLossValidation.valid) {
-    return sessionLossValidation
+    return sessionLossValidation;
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
@@ -274,12 +274,12 @@ async function validateDailyLossLimit(
   request: BetValidationRequest
 ): Promise<BetValidationResult>
 {
-  const today = new Date()
+  const today = new Date();
   const startOfDay = new Date(
     today.getFullYear(),
     today.getMonth(),
     today.getDate()
-  )
+  );
 
   // Calculate today's total losses (negative GGR)
   const todayStats = await db
@@ -293,22 +293,22 @@ async function validateDailyLossLimit(
         eq(gameSessions.playerId, request.userId),
         gte(gameSessions.createdAt, startOfDay)
       )
-    )
+    );
 
-  const stats = todayStats[0]
-  const todayLosses = (stats?.totalWager || 0) - (stats?.totalWon || 0)
+  const stats = todayStats[0];
+  const todayLosses = (stats?.totalWager || 0) - (stats?.totalWon || 0);
 
   // Daily loss limit (should be configurable per user/VIP level)
-  const dailyLossLimit = 1000000 // $10,000 - should be configurable
+  const dailyLossLimit = 1000000; // $10,000 - should be configurable
 
   if (todayLosses + request.wagerAmount > dailyLossLimit) {
     return {
       valid: false,
       reason: `Daily loss limit of $${dailyLossLimit / 100} would be exceeded`,
-    }
+    };
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
@@ -325,27 +325,27 @@ async function validateSessionLossLimit(
       eq(gameSessions.gameId, request.gameId),
       eq(gameSessions.status, 'ACTIVE')
     ),
-  })
+  });
 
   if (!gameSession) {
-    return { valid: false, reason: 'No active game session' }
+    return { valid: false, reason: 'No active game session' };
   }
 
   const sessionLosses =
     ((gameSession as any).totalWagered || 0) -
-    ((gameSession as any).totalWon || 0)
+    ((gameSession as any).totalWon || 0);
 
   // Session loss limit (should be configurable per game/session)
-  const sessionLossLimit = 100000 // $1,000 - should be configurable
+  const sessionLossLimit = 100000; // $1,000 - should be configurable
 
   if (sessionLosses + request.wagerAmount > sessionLossLimit) {
     return {
       valid: false,
       reason: `Session loss limit of $${sessionLossLimit / 100} would be exceeded`,
-    }
+    };
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
@@ -362,20 +362,20 @@ async function validateBalance(
   //         balances: true,
   //     },
   // })
-  const userWallets = await getUserWallets(request.userId)
-  const user = userWallets[0]
+  const userWallets = await getUserWallets(request.userId);
+  const user = userWallets[0];
 
   if (!user) {
-    return { valid: false, reason: 'User wallet not found' }
+    return { valid: false, reason: 'User wallet not found' };
   }
 
-  const walletBalance = user
+  const walletBalance = user;
 
   // Check balance using wallet service
   const balanceCheck = await checkWalletBalance(
     walletBalance.walletId,
     request.wagerAmount
-  )
+  );
 
   if (!balanceCheck.sufficient) {
     return {
@@ -383,14 +383,14 @@ async function validateBalance(
       reason: `Insufficient balance. Available: $${balanceCheck.availableAmount / 100}`,
       balanceType: balanceCheck.balanceType,
       availableBalance: balanceCheck.availableAmount,
-    }
+    };
   }
 
   return {
     valid: true,
     balanceType: balanceCheck.balanceType,
     availableBalance: balanceCheck.availableAmount,
-  }
+  };
 }
 
 /**
@@ -407,9 +407,9 @@ export async function quickValidateBet(
     userId,
     gameId,
     wagerAmount,
-  })
+  });
 
-  return validation.valid
+  return validation.valid;
 }
 
 /**
@@ -421,10 +421,10 @@ export async function getGameLimits(
 {
   const game = await db.query.games.findFirst({
     where: eq(games.id, gameId),
-  })
+  });
 
   if (!game) {
-    return null
+    return null;
   }
 
   // These limits should ideally come from a game configuration table
@@ -434,5 +434,5 @@ export async function getGameLimits(
     maxBet: 100000, // $1000.00
     maxDailyLoss: 1000000, // $10,000
     maxSessionLoss: 100000, // $1,000
-  }
+  };
 }

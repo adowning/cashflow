@@ -227,7 +227,6 @@ export default {
   // patchUpdate,
 };
 
-// import bcrypt from "bcryptjs";
 // import moment from "moment";
 // // //import { RootFilterQuery, UpdateQuery } from 'mongoose';
 // // models
@@ -288,7 +287,6 @@ export default {
 // };
 
 // const updatePassword = async (id: string, password: string) => {
-// 	const newPassword = await bcrypt.hash(password, 8);
 // 	return await UserModel.findOneAndUpdate(
 // 		{ _id: id },
 // 		{ password: newPassword },

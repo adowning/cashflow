@@ -9,7 +9,6 @@
   "workspaces": [
     "backend",
     "frontend",
-    "dashboard",
     "packages/*"
   ],
   "scripts": {
@@ -33,46 +32,9 @@
     "schema": "backend/prisma/schema.prisma"
   },
   "dependencies": {
-    "@nuxt/ui": "^4.0.1",
-    "@stacksjs/cli": "^0.70.23",
-    "@stacksjs/error-handling": "^0.70.23",
-    "@stacksjs/logging": "^0.70.23",
-    "@stacksjs/path": "^0.70.23",
-    "@vueuse/core": "^13.9.0",
-    "bun-router": "^0.8.1",
-    "bun-ws-router": "^0.6.1",
-    "bunfig": "^0.15.0",
-    "drizzle-prisma-generator": "^0.1.7",
-    "drizzle-zod": "^0.8.3",
-    "nanoid": "^5.1.6",
-    "pino-pretty": "^13.1.2",
-    "postgres": "^3.4.7",
-    "prisma-generator-drizzle": "^0.7.6",
-    "prisma-generator-typescript-interfaces": "^3.1.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "ts-cache": "^0.2.2",
-    "ua-parser-js": "^2.0.6",
-    "zod": "^4.1.12"
+   
   },
   "devDependencies": {
-    "@eslint/js": "^9.37.0",
-    "@kevinmarrec/eslint-config": "^1.5.3",
-    "@kevinmarrec/stylelint-config": "^1.2.2",
-    "@kevinmarrec/tsconfig": "^1.1.0",
-    "@stylistic/eslint-plugin": "^5.4.0",
-    "@types/bcryptjs": "^3.0.0",
-    "bun-plugin-auto-imports": "^0.3.1",
-    "concurrently": "^9.2.1",
-    "eslint": "^9.37.0",
-    "eslint-js": "eslint/js",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-vue": "^10.5.1",
-    "globals": "^16.4.0",
-    "knip": "^5.66.0",
-    "stylelint": "^16.25.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.1",
-    "vue-tsc": "^3.1.1"
+   
   }
 }

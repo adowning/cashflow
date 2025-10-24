@@ -1,11 +1,11 @@
 import { getSessionFromToken, signInUsername } from './wsAuth';
-import {router} from './wsRouter';
+import {router, type UserData} from './wsRouter';
 import homepageHtml from './client-example.html' ;
 import app from './app';
 
 
 // Assign the server instance to a constant
-const server = Bun.serve({
+const server = Bun.serve<UserData>({
   port:6001,
   routes: {
     '/testhtml': homepageHtml,
@@ -18,7 +18,7 @@ const server = Bun.serve({
     const url = new URL(req.url);
     console.log(url.pathname);
     if(url.pathname === '/api/auth/sign-in/username'){
-      
+      //@ts-ignore
       const {username, password} = await req.json();
       console.log(username);
       console.log(password);

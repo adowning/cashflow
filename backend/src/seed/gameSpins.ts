@@ -32,10 +32,10 @@ export async function seedGameSpins(operatorId: string)
       const g = rand(allGames) as any;
       const sessionData: typeof schema.gameSessions.$inferInsert = {
         id: nanoid(),
-        playerId: userSession.playerId,
+        playerId: userSession.userId,
         authSessionId: userSession.id as string,
         gameId: g.id,
-        invitorId: player?.invitorId,
+        // invitorId: player?.invitorId,
         status: 'ACTIVE',
         gameName: g.name,
         createdAt: createdAt,

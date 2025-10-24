@@ -1,13 +1,12 @@
-import bcrypt from "bcryptjs";
-import moment from "moment";
-import settingService from "#/modulesV2/common/services/setting.service";
+import moment from 'moment';
+import settingService from '#/modulesV2/common/services/setting.service';
 //import { RootFilterQuery, UpdateQuery } from 'mongoose';
 // models
 import AffiliateModel, {
 	type IAffiliate,
 	default as TransactionModel,
 	default as UserModel,
-} from "@/types";
+} from '@/types';
 
 const usernameTaken = async (username: string, id?: string) => {
 	return await AffiliateModel.isUsernameTaken(username, id);
@@ -27,7 +26,7 @@ const getAffiliateByparentId = async (parentId: string) => {
 
 const getAffiliateByUsername = async (username: string) => {
 	return await AffiliateModel.findOne({
-		username: username.toLowerCase().replaceAll(" ", ""),
+		username: username.toLowerCase().replaceAll(' ', ''),
 	});
 };
 
@@ -37,7 +36,7 @@ const getAffiliateByReferralCode = async (referralCode: string) => {
 
 const getAffiliateByEmail = async (email: string) => {
 	return await AffiliateModel.findOne({
-		email: email.toLowerCase().replaceAll(" ", ""),
+		email: email.toLowerCase().replaceAll(' ', ''),
 	});
 };
 
@@ -58,7 +57,7 @@ const createAffiliate = async (data: ICreateAffiliate) => {
 };
 
 const updatePassword = async (id: string, password: string) => {
-	const newPassword = await bcrypt.hash(password, 8);
+	const newPassword = await Bun.password.hash(password);
 	return await AffiliateModel.findOneAndUpdate(
 		{ _id: id },
 		{ password: newPassword },
@@ -88,7 +87,7 @@ const getAffiliates = async (filter: IAffiliatesFilter) => {
 	// eslint-disable-next-line
 	const conditions: any = { role: "user" };
 	if (filter.username)
-		conditions.username = { $regex: new RegExp(filter.username, "i") };
+		conditions.username = { $regex: new RegExp(filter.username, 'i') };
 	if (filter.email) conditions.email = filter.email;
 
 	if (!filter.isAll && filter.date) {
@@ -118,9 +117,9 @@ const getAffiliates = async (filter: IAffiliatesFilter) => {
 const getDashboard = async (filter: { parentId: string; duration: string }) => {
 	// eslint-disable-next-line
 	const conditions: any = { path: filter.parentId };
-	if (filter.duration === "30") {
+	if (filter.duration === '30') {
 		const today = new Date();
-		const startDate = moment().add(-30, "days").startOf("day").toDate();
+		const startDate = moment().add(-30, 'days').startOf('day').toDate();
 		conditions.createdAt = {
 			$gte: startDate,
 			$lte: today,
@@ -134,7 +133,7 @@ const getDashboard = async (filter: { parentId: string; duration: string }) => {
 		},
 		{
 			$group: {
-				_id: "$role",
+				_id: '$role',
 				count: { $sum: 1 }, // or other aggregations
 			},
 		},
@@ -162,15 +161,15 @@ const getAnalysis = async (
 		},
 		{
 			$group: {
-				_id: { type: "$type", currency: "$currency" },
-				total: { $sum: "$amount" },
+				_id: { type: '$type', currency: '$currency' },
+				total: { $sum: '$amount' },
 			},
 		},
 		{
 			$project: {
 				_id: 0,
-				type: "$_id.type",
-				data: { $arrayToObject: [[{ k: "$_id.currency", v: "$total" }]] },
+				type: '$_id.type',
+				data: { $arrayToObject: [[{ k: '$_id.currency', v: '$total' }]] },
 			},
 		},
 		{
@@ -178,12 +177,12 @@ const getAnalysis = async (
 				_id: null,
 				win: {
 					$push: {
-						$cond: [{ $eq: ["$type", "win"] }, "$data", "$$REMOVE"],
+						$cond: [{ $eq: ['$type', 'win'] }, '$data', '$$REMOVE'],
 					},
 				},
 				bet: {
 					$push: {
-						$cond: [{ $eq: ["$type", "bet"] }, "$data", "$$REMOVE"],
+						$cond: [{ $eq: ['$type', 'bet'] }, '$data', '$$REMOVE'],
 					},
 				},
 			},
@@ -223,10 +222,10 @@ const getDashboardChildren = async (
 		},
 		{
 			$group: {
-				_id: "$userId",
-				totalAmount: { $sum: "$amount" },
-				path: { $first: "$path" },
-				currency: { $first: "$currencyName" },
+				_id: '$userId',
+				totalAmount: { $sum: '$amount' },
+				path: { $first: '$path' },
+				currency: { $first: '$currencyName' },
 			},
 		},
 	]);
@@ -257,10 +256,10 @@ const getChildrenAffiliate = async (
 	parentId: string,
 	filter: IAffiliateFilter,
 ) => {
-	const conditions: any = { path: parentId, status: "active" };
+	const conditions: any = { path: parentId, status: 'active' };
 	// if (filter.status) conditions.status = filter.status;
 	if (filter.username)
-		conditions.username = { $regex: new RegExp(filter.username, "i") };
+		conditions.username = { $regex: new RegExp(filter.username, 'i') };
 
 	const skip = (filter.currentPage - 1) * filter.rowsPerPage;
 	const total = await AffiliateModel.countDocuments(conditions);
@@ -295,8 +294,8 @@ const getTreeAffiliate = async (parentId: string) => {
 			$project: {
 				_id: 1,
 				username: 1,
-				role: "user",
-				parentId: "$invitorId",
+				role: 'user',
+				parentId: '$invitorId',
 			},
 		},
 	]);
@@ -312,10 +311,10 @@ const getAffiliateUsers = async (
 	parentId: string,
 	filter: IAffiliateUserFilter,
 ) => {
-	const conditions: any = { path: parentId, status: "active" };
+	const conditions: any = { path: parentId, status: 'active' };
 	// if (filter.status) conditions.status = filter.status;
 	if (filter.username)
-		conditions.username = { $regex: new RegExp(filter.username, "i") };
+		conditions.username = { $regex: new RegExp(filter.username, 'i') };
 
 	const skip = (filter.currentPage - 1) * filter.rowsPerPage;
 	const total = await UserModel.countDocuments(conditions);
@@ -332,14 +331,14 @@ const getAffiliateUsers = async (
 		},
 		{
 			$lookup: {
-				from: "affiliates",
-				as: "affiliate",
-				localField: "invitorId",
-				foreignField: "_id",
+				from: 'affiliates',
+				as: 'affiliate',
+				localField: 'invitorId',
+				foreignField: '_id',
 			},
 		},
 		{
-			$unwind: "$affiliate",
+			$unwind: '$affiliate',
 		},
 	]);
 
@@ -375,7 +374,7 @@ function _generateQRCodeSVG(text: string): string {
 		}
 	}
 
-	svg += `</g></svg>`;
+	svg += '</g></svg>';
 	return svg;
 }
 

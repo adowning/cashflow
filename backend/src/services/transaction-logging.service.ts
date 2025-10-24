@@ -97,9 +97,59 @@ export async function logTransaction(
       path: [], // Would be populated with affiliate path if applicable
       category: transactionData.category,
       provider: transactionData.provider,
+      wagerAmount: transactionData.wagerAmount, // Store wager amount
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    /**
+     * WIN Transaction Handling:
+     *
+     * For each bet that results in a win, we create a separate 'WIN' transaction record
+     * in addition to the 'BET'/'BONUS' transaction. This ensures accurate financial tracking
+     * and enables correct statistics calculation.
+     *
+     * Key differences from BET transactions:
+     * - Type: 'WIN' (vs 'BET' or 'BONUS')
+     * - Amount: Represents the win amount (positive)
+     * - Status: Always 'COMPLETED' (wins are immediately processed)
+     * - wagerAmount: Included for reference and GGR calculations
+     *
+     * This dual-transaction approach allows the statistics queries to correctly
+     * distinguish between wager amounts and win amounts, preventing data corruption
+     * in analytics and compliance reporting.
+     */
+    let winTransactionId: string | undefined;
+    if (transactionData.winAmount > 0) {
+      winTransactionId = crypto.randomUUID();
+      const winTransactionRecord = {
+        id: winTransactionId,
+        playerId: transactionData.userId,
+        relatedId: transactionData.sessionId || winTransactionId,
+        tnxId: `WIN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        amount: transactionData.winAmount, // Win amount (positive value)
+        beforeAmount:
+                  transactionData.preRealBalance +
+                  transactionData.preBonusBalance,
+        afterAmount:
+                  transactionData.postRealBalance +
+                  transactionData.postBonusBalance,
+        currencyName: transactionData.currency || 'USD',
+        type: 'WIN', // Dedicated transaction type for wins
+        typeDescription: `Win - ${transactionData.gameName || 'Unknown Game'}`,
+        gameName: transactionData.gameName,
+        gameId: transactionData.gameId,
+        path: [], // Would be populated with affiliate path if applicable
+        category: transactionData.category,
+        provider: transactionData.provider,
+        wagerAmount: transactionData.wagerAmount, // Reference to original wager for analytics
+        status: 'COMPLETED', // Wins are immediately credited and completed
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await db.insert(transactions).values(winTransactionRecord);
+    }
 
     // Insert into transactions table
     await db.insert(transactions).values(transactionRecord);

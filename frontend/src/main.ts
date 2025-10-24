@@ -49,7 +49,7 @@ export const createApp = ViteSSG(App, async ({ app }) => {
 
   app.use(ui);
 
-  app.mount('#app');
+  // app.mount('#app');
 
 
 

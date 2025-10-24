@@ -1,10 +1,50 @@
-{ "extends": "../tsconfig.json", "compilerOptions": { "strict": true,
-   "paths": {
-            "@/*": ["./src/*"],
-            "#/*": ["./src/*"],
-            "@@/*": ["./*"],
-              "@backend/*": ["./src/*"],
-        }
-}
-
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "jsx": "preserve",
+    "lib": [
+      "ESNext"
+    ],
+    "moduleDetection": "force",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "forceConsistentCasingInFileNames": true,
+    "erasableSyntaxOnly": false,
+    "composite": true,
+    "outDir": "./dist",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "#/*": [
+        "./src/*"
+      ],
+      "@@/*": [
+        "./*"
+      ],
+      "@backend/*": [
+        "./src/*"
+      ],
+    }
+  },
+     "exclude": [
+    "**/dist/**",
+    "**/data/**",
+    "**/node_modules/**",
+    "**/*.config.*",
+    "**/*.cjs",
+    "**/*.mjs",
+    "**/*.js",
+    "**/misc/**"
+  ]
 }

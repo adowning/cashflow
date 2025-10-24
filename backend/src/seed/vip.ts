@@ -4,8 +4,8 @@ import { randNumber } from '@ngneat/falso';
 import { eq, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import * as schema from '../database/schema';
-import db, { type VipLevel } from '../database/index';
 import { players, vipInfos } from '../database/schema';
+import db from '../database/index';
 
 const constRanks = [
   {
@@ -134,6 +134,7 @@ const constRanks = [
 
 export function generateRandomVipInfo(userId: string)
 {
+
   const level = randNumber({ min: 1, max: 5 });
   const baseExp = level * 1000;
   const depositExp = randNumber({ min: baseExp, max: baseExp * 10 });
@@ -162,8 +163,17 @@ export function generateRandomVipInfo(userId: string)
 export async function seedVipLevels()
 {
   // const vipLevel = vipLevels
+  const tableNames = ['vip_levels', 'vip_ranks'];
   console.log('💎 Seeding VIP levels...');
+ const truncateQuery = `TRUNCATE TABLE ${tableNames.map((name) => `"${name}"`).join(', ')} RESTART IDENTITY CASCADE;`;
 
+  try {
+    await db.execute(sql.raw(truncateQuery));
+    console.log('✅ Database reset successfully.');
+  } catch (error) {
+    console.error('❌ Error resetting database:', error);
+    throw error;
+  }
   // const savedRanks = await db
   //   .insert(vipRanks)
   //   .values(ranks)

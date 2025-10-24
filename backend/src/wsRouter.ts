@@ -42,7 +42,7 @@ interface JwtPayload
     roles: Role[]
 }
 // User data interface
-interface UserData extends Record<string, unknown>
+export interface UserData extends Record<string, unknown>
 {
     userId: string
     username: string

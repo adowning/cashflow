@@ -1,8 +1,7 @@
-import { users, sessions } from '@backend/database/schema';
+import { users, sessions, accounts } from '@backend/database/schema';
 import {  inArray } from 'drizzle-orm';
-import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import db from '@backend/database';
+import db  from '@backend/database';
 import { v4 as uuidv4 } from 'uuid';
 import chalk from 'chalk';
 
@@ -53,17 +52,16 @@ export const seedAndLoginUsers = async () => {
 
     // --- Step 2: Create all new users ---
     console.log(chalk.yellow(`\n- Creating ${allUsersToProcess.length} new users...`));
-    const createdUsersWithPasswords: User[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createdUsersWithPasswords: any[] = [];
 
     for (const user of allUsersToProcess) {
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(user.password, salt);
+      const passwordHash = await Bun.password.hash(user.password);
       const now = new Date();
 
       const [newUser] = await db
         .insert(users)
         .values({
-          id: crypto.randomUUID(),
           name: user.name,
           email: user.email,
           emailVerified: true,
@@ -72,13 +70,25 @@ export const seedAndLoginUsers = async () => {
           createdAt: now,
           updatedAt: now,
         })
-        .returning({
-          id: users.id,
-          email: users.email,
-          passwordHash: users.passwordHash,
-        });
+        .returning();
 
       console.log(chalk.cyan(`  - Created user: ${newUser.email}`));
+
+      // Create corresponding account entry
+      await db.insert(accounts).values({
+        id: crypto.randomUUID(),
+        accountId: user.email,
+        providerId: 'credential',
+        userId: newUser.id,
+        accessToken: null,
+        refreshToken: null,
+        password: user.password,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      console.log(chalk.cyan(`  - Created account for user: ${newUser.email}`));
+
       // Store the plain password temporarily for session creation
       createdUsersWithPasswords.push({ ...newUser, plainPassword: user.password });
     }
@@ -93,10 +103,8 @@ export const seedAndLoginUsers = async () => {
         continue;
       }
 
-      const isPasswordCorrect = await bcrypt.compare(
-        user.plainPassword,
-        user.passwordHash
-      );
+      const isPasswordCorrect = await Bun.password.verify(user.plainPassword, user.passwordHash);
+     
 
       if (isPasswordCorrect) {
         const sessionToken = crypto.randomBytes(32).toString('hex');
@@ -104,10 +112,17 @@ export const seedAndLoginUsers = async () => {
 
         await db.insert(sessions).values({
           id: uuidv4(),
+          wallets:[{
+            id: uuidv4(),
+            userId: user.id,
+            name: 'Main Wallet',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }],
           userId: user.id,
           // Assuming playerId is the same as userId for this seeding purpose
           playerId: user.id, 
-          sessionToken: sessionToken,
+          // sessionToken: sessionToken,
           token: sessionToken, // Depending on schema, you might have one or both
           expiresAt: expiresAt,
           createdAt: new Date(),

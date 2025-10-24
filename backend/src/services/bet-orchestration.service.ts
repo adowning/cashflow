@@ -147,22 +147,100 @@ export async function processBet(
     }
 
     // 5. Add winnings to balance
+    /**
+     * Mixed Balance Winnings Distribution Logic:
+     *
+     * When a bet uses mixed balance types (real + bonus), winnings must be distributed
+     * proportionally based on how much was deducted from each balance type during wagering.
+     *
+     * Algorithm:
+     * 1. Calculate total amount deducted from all balance types
+     * 2. Determine the ratio of real vs bonus deductions
+     * 3. Apply same ratios to winnings distribution
+     * 4. Credit real and bonus portions separately
+     *
+     * This ensures fair distribution and prevents bonus exploitation while maintaining
+     * accurate balance tracking for compliance and auditing.
+     */
     let winningsAddition: { success: boolean; newBalance: number; error?: string } = { success: true, newBalance: 0 };
     let finalBalance = runningBalance;
+    let realWinnings = 0;
+    let bonusWinnings = 0;
 
     if (gameOutcome.winAmount > 0) {
-      winningsAddition = await addWinnings({
-        walletId: usersWallet.walletId,
-        amount: gameOutcome.winAmount,
-        balanceType:
-          balanceDeduction.balanceType === 'bonus' ? 'bonus' : 'real',
-        reason: `Game win - ${betRequest.gameId}`,
-        gameId: betRequest.gameId,
-      }).catch(error =>
-      {
-        console.error('Add winnings failed:', error);
-        throw new Error(error.message);
-      });
+      if (balanceDeduction.balanceType === 'mixed') {
+        // Calculate total deducted from all balance types for ratio computation
+        const totalDeducted = balanceDeduction.deductedFrom.real +
+          balanceDeduction.deductedFrom.bonuses.reduce((sum, b) => sum + b.amount, 0);
+
+        if (totalDeducted === 0) {
+          // Edge case: no deduction occurred (shouldn't happen in normal flow)
+          // Default to real balance for safety
+          realWinnings = gameOutcome.winAmount;
+          bonusWinnings = 0;
+          winningsAddition = await addWinnings({
+            walletId: usersWallet.walletId,
+            amount: gameOutcome.winAmount,
+            balanceType: 'real',
+            reason: `Game win - ${betRequest.gameId}`,
+            gameId: betRequest.gameId,
+          });
+        } else {
+          // Proportional distribution based on wager deduction ratios
+          const realDeducted = balanceDeduction.deductedFrom.real;
+          const bonusDeducted = balanceDeduction.deductedFrom.bonuses.reduce((sum, b) => sum + b.amount, 0);
+
+          // Calculate ratios: how much of the wager came from each balance type
+          const realRatio = realDeducted / totalDeducted;
+          const _bonusRatio = bonusDeducted / totalDeducted; // Calculated but not directly used (implied by realRatio)
+
+          // Apply same ratios to winnings distribution
+          realWinnings = Math.round(gameOutcome.winAmount * realRatio);
+          bonusWinnings = gameOutcome.winAmount - realWinnings; // Ensure no rounding loss
+
+          // Credit real portion
+          const realAddition = await addWinnings({
+            walletId: usersWallet.walletId,
+            amount: realWinnings,
+            balanceType: 'real',
+            reason: `Game win - ${betRequest.gameId} (real portion)`,
+            gameId: betRequest.gameId,
+          });
+
+          // Credit bonus portion
+          const bonusAddition = await addWinnings({
+            walletId: usersWallet.walletId,
+            amount: bonusWinnings,
+            balanceType: 'bonus',
+            reason: `Game win - ${betRequest.gameId} (bonus portion)`,
+            gameId: betRequest.gameId,
+          });
+
+          // Aggregate results - both must succeed for overall success
+          winningsAddition = {
+            success: realAddition.success && bonusAddition.success,
+            newBalance: bonusAddition.newBalance, // Use bonus addition as final balance reference
+            error: realAddition.error || bonusAddition.error
+          };
+        }
+      } else {
+        // Single balance type - direct crediting
+        const balanceType = balanceDeduction.balanceType === 'bonus' ? 'bonus' : 'real';
+        winningsAddition = await addWinnings({
+          walletId: usersWallet.walletId,
+          amount: gameOutcome.winAmount,
+          balanceType,
+          reason: `Game win - ${betRequest.gameId}`,
+          gameId: betRequest.gameId,
+        });
+
+        // Track winnings by type for transaction logging
+        if (balanceType === 'real') {
+          realWinnings = gameOutcome.winAmount;
+        } else {
+          bonusWinnings = gameOutcome.winAmount;
+        }
+      }
 
       if (!winningsAddition.success) {
         console.error('Failed to add winnings:', winningsAddition.error);
@@ -222,10 +300,17 @@ export async function processBet(
     });
 
     // 11. Log comprehensive transaction
+    // Calculate accurate pre/post balances using actual balance deduction data
+    const preRealBalance = usersWallet.realBalance;
     const preBonusBalance = usersWallet.bonusBalance;
-    const postBonusBalance = balanceDeduction.balanceType === 'bonus'
-      ? (usersWallet.bonusBalance - balanceDeduction.deductedFrom.bonuses.reduce((sum, bonus) => sum + bonus.amount, 0) + (gameOutcome.winAmount > 0 && balanceDeduction.balanceType === 'bonus' ? gameOutcome.winAmount : 0))
-      : usersWallet.bonusBalance;
+
+    // Calculate total amounts deducted from each balance type
+    const totalRealDeducted = balanceDeduction.deductedFrom.real;
+    const totalBonusDeducted = balanceDeduction.deductedFrom.bonuses.reduce((sum, bonus) => sum + bonus.amount, 0);
+
+    // Calculate post balances: pre - deducted + winnings
+    const postRealBalance = preRealBalance - totalRealDeducted + realWinnings;
+    const postBonusBalance = preBonusBalance - totalBonusDeducted + bonusWinnings;
 
     const transactionId = await logTransaction({
       userId: betRequest.userId,
@@ -234,8 +319,8 @@ export async function processBet(
       wagerAmount: betRequest.wagerAmount,
       winAmount: gameOutcome.winAmount,
       betType: balanceDeduction.balanceType,
-      preRealBalance: runningBalance, // Pre-bet real balance
-      postRealBalance: balanceDeduction.balanceType === 'real' ? newBalance : runningBalance,
+      preRealBalance,
+      postRealBalance,
       preBonusBalance,
       postBonusBalance,
       ggrContribution: ggrResult.ggrAmount,
@@ -251,12 +336,20 @@ export async function processBet(
     });
 
     // 12. Send realtime notifications
+    let realBalanceChange = 0;
+    let bonusBalanceChange = 0;
+    if (balanceDeduction.balanceType === 'mixed') {
+      realBalanceChange = realWinnings - balanceDeduction.deductedFrom.real;
+      bonusBalanceChange = bonusWinnings - balanceDeduction.deductedFrom.bonuses.reduce((sum, b) => sum + b.amount, 0);
+    } else if (balanceDeduction.balanceType === 'real') {
+      realBalanceChange = (gameOutcome.winAmount > 0 ? gameOutcome.winAmount : 0) - balanceDeduction.deductedFrom.real;
+    } else if (balanceDeduction.balanceType === 'bonus') {
+      bonusBalanceChange = (gameOutcome.winAmount > 0 ? gameOutcome.winAmount : 0) - balanceDeduction.deductedFrom.bonuses.reduce((sum, b) => sum + b.amount, 0);
+    }
     await sendPostBetNotifications(betRequest.userId, {
       balanceChange: {
-        realBalance:
-          balanceDeduction.balanceType === 'real' ? newBalance : 0,
-        bonusBalance:
-          balanceDeduction.balanceType === 'bonus' ? newBalance : 0,
+        realBalance: realBalanceChange,
+        bonusBalance: bonusBalanceChange,
         totalBalance: newBalance,
         changeAmount: gameOutcome.winAmount - betRequest.wagerAmount,
         changeType: gameOutcome.winAmount > 0 ? 'win' : 'bet',
@@ -363,10 +456,22 @@ export async function preValidateBet(
 
 /**
  * Get bet processing statistics from the last 24 hours.
+ *
+ * Corrected SQL Query Logic:
+ * - totalBets: Count 'BET' and 'BONUS' transactions (wager transactions only)
+ * - successfulBets: Count completed wager transactions with status = 'COMPLETED'
+ * - totalWagered: Sum wager_amount from 'BET'/'BONUS' transactions (not win amounts)
+ * - totalWon: Sum amount from 'WIN' transactions (win amounts only)
+ * - averageProcessingTime: Average from logged processing_time field (filtered for validity)
+ *
+ * Key Corrections:
+ * - Separated wager amounts (BET/BONUS.type.wager_amount) from win amounts (WIN.type.amount)
+ * - Added status filtering for success rate calculation
+ * - Used proper field mappings to prevent data corruption in analytics
  */
 export async function getBetProcessingStats(): Promise<{
   totalBets: number
-  averageProcessingTime: number // Now calculated from actual logged data
+  averageProcessingTime: number // Calculated from actual logged processing_time data
   successRate: number
   totalWagered: number
   totalGGR: number
@@ -377,10 +482,10 @@ export async function getBetProcessingStats(): Promise<{
 
     const results = await db
       .select({
-        totalBets: sql`count(CASE WHEN type = 'BET' THEN 1 END)`,
-        successfulBets: sql`count(CASE WHEN type = 'BET' AND status = 'COMPLETED' THEN 1 END)`,
-        totalWagered: sql`coalesce(sum(CASE WHEN type = 'BET' THEN amount ELSE 0 END), 0)`,
-        totalWon: sql`coalesce(sum(CASE WHEN type = 'WIN' THEN amount ELSE 0 END), 0)`,
+        totalBets: sql`count(CASE WHEN type IN ('BET', 'BONUS') THEN 1 END)`, // Count wager transactions only
+        successfulBets: sql`count(CASE WHEN type IN ('BET', 'BONUS') AND status = 'COMPLETED' THEN 1 END)`, // Completed wagers
+        totalWagered: sql`coalesce(sum(CASE WHEN type IN ('BET', 'BONUS') THEN wager_amount ELSE 0 END), 0)`, // Sum wager amounts
+        totalWon: sql`coalesce(sum(CASE WHEN type = 'WIN' THEN amount ELSE 0 END), 0)`, // Sum win amounts from WIN transactions
         averageProcessingTime: sql`coalesce(avg(CASE WHEN processing_time > 0 AND processing_time < 10000 THEN processing_time ELSE NULL END), 0)`, // Filter valid processing times (0-10s range)
       })
       .from(transactions)

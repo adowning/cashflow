@@ -18,6 +18,7 @@ import type {
 	ChartDataPoint,
 	PaginatedTransactions,
 } from "@/types/dashboard";
+import { client } from '@/client/client'
 
 /**
  * Centralized store for dashboard data management.
@@ -95,21 +96,21 @@ export const useDashboardStore = defineStore("dashboard", () => {
 		isLoadingKpi.value = true;
 		kpiError.value = null;
 
-		try {
-			const response = await getApiDashboardKpiSummary();
-			kpiData.value = response.data;
-		} catch (error) {
-			kpiError.value = "Failed to load KPI summary data";
-			toast.add({
-				title: "Error",
-				description: "Failed to load KPI summary data. Please try again.",
-				icon: "i-lucide-alert-circle",
-				color: "error",
-			});
-			console.error("Error fetching KPI summary:", error);
-		} finally {
-			isLoadingKpi.value = false;
-		}
+		// try {
+		// 	const response = await getApiDashboardKpiSummary();
+		// 	kpiData.value = response.data;
+		// } catch (error) {
+		// 	kpiError.value = "Failed to load KPI summary data";
+		// 	toast.add({
+		// 		title: "Error",
+		// 		description: "Failed to load KPI summary data. Please try again.",
+		// 		icon: "i-lucide-alert-circle",
+		// 		color: "error",
+		// 	});
+		// 	console.error("Error fetching KPI summary:", error);
+		// } finally {
+		// 	isLoadingKpi.value = false;
+		// }
 	};
 
 	/**
@@ -162,22 +163,22 @@ export const useDashboardStore = defineStore("dashboard", () => {
 		isLoadingGameStats.value = true;
 		gameStatsError.value = null;
 
-		try {
-			const response = await getApiDashboardGameStats();
-			console.log(response);
-			gameStats.value = response.data.data;
-		} catch (error) {
-			gameStatsError.value = "Failed to load game statistics";
-			toast.add({
-				title: "Error",
-				description: "Failed to load game statistics. Please try again.",
-				icon: "i-lucide-alert-circle",
-				color: "error",
-			});
-			console.error("Error fetching game stats:", error);
-		} finally {
-			isLoadingGameStats.value = false;
-		}
+		// try {
+		// 	const response = await getApiDashboardGameStats();
+		// 	console.log(response);
+		// 	gameStats.value = response.data.data;
+		// } catch (error) {
+		// 	gameStatsError.value = "Failed to load game statistics";
+		// 	toast.add({
+		// 		title: "Error",
+		// 		description: "Failed to load game statistics. Please try again.",
+		// 		icon: "i-lucide-alert-circle",
+		// 		color: "error",
+		// 	});
+		// 	console.error("Error fetching game stats:", error);
+		// } finally {
+		// 	isLoadingGameStats.value = false;
+		// }
 	};
 
 	/**
@@ -190,7 +191,12 @@ export const useDashboardStore = defineStore("dashboard", () => {
 		if (filters) {
 			playerFilters.value = { ...playerFilters.value, ...filters };
 		}
-
+		client.users.$post({
+			body:{
+				   title: 'Hello',
+    body: 'Hono is a cool project',
+			}
+		})
 		isLoadingPlayers.value = true;
 		playersError.value = null;
 

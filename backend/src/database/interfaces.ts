@@ -41,34 +41,31 @@ export type UpdateType = "BINARY" | "OTA";
 export type User = {
   id: string;
   name: string;
-  username: string | null;
-  role: string;
-  banned: boolean;
-  displayUsername: string | null;
-  two_factor_enabled: boolean;
-  playerId: string | null;
   email: string;
   emailVerified: boolean;
-  passwordHash: string;
   image: string | null;
   createdAt: Date;
   updatedAt: Date;
   sessions?: Session[];
   accounts?: Account[];
-  wallets?: Wallet[];
+  role: string | null;
+  banned: boolean | null;
+  banReason: string | null;
+  banExpires: Date | null;
 };
 
 export type Session = {
   id: string;
   expiresAt: Date;
   token: string;
+  createdAt: Date;
+  updatedAt: Date;
   ipAddress: string | null;
   userAgent: string | null;
   userId: string;
-  playerId: string;
   user?: User;
-  createdAt: Date;
-  updatedAt: Date;
+  activeOrganizationId: string | null;
+  impersonatedBy: string | null;
 };
 
 export type Account = {
@@ -89,6 +86,9 @@ export type Account = {
 };
 
 export type Verification = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   identifier: string;
   value: string;
@@ -98,6 +98,9 @@ export type Verification = {
 };
 
 export type jwks = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   privateKey: string;
   passpublicKey: string;
@@ -105,6 +108,9 @@ export type jwks = {
 };
 
 export type Player = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playername: string;
   email: string | null;
@@ -147,6 +153,7 @@ export type Player = {
   Jackpots?: Jackpots[];
   activeWalletId: string | null;
   loyaltyFundTransactions?: LoyaltyFundTransaction[];
+  wallets?: Wallet[];
   vipInfo?: VipInfo | null;
   withdrawals?: Withdrawal[];
   activeOperatorId: string | null;
@@ -165,6 +172,9 @@ export type Player = {
 };
 
 export type Deposit = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string | null;
   amount: number | null;
@@ -181,6 +191,9 @@ export type Deposit = {
 };
 
 export type GameSessions = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   authSessionId: string;
   playerId: string;
@@ -202,6 +215,9 @@ export type GameSessions = {
 };
 
 export type JackpotContributions = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   jackpotId: string;
   playerId: string | null;
@@ -213,6 +229,9 @@ export type JackpotContributions = {
 };
 
 export type JackpotWins = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   jackpotId: string;
   winnerId: string;
@@ -227,6 +246,9 @@ export type JackpotWins = {
 };
 
 export type Jackpots = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   type: string;
   currentAmountCoins: number;
@@ -251,6 +273,9 @@ export type Jackpots = {
 };
 
 export type Operators = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   name: string;
   operatorSecret: string;
@@ -281,6 +306,9 @@ export type Operators = {
 };
 
 export type OperatorSwitchHistory = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string;
   fromOperatorId: string | null;
@@ -294,6 +322,9 @@ export type OperatorSwitchHistory = {
 };
 
 export type Products = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   title: string;
   productType: string;
@@ -314,6 +345,9 @@ export type Products = {
 };
 
 export type Transaction = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   processedAt: Date | null;
   walletId: string | null;
@@ -347,6 +381,9 @@ export type Transaction = {
 };
 
 export type ReferralCode = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   code: string;
   name: string | null;
@@ -358,6 +395,9 @@ export type ReferralCode = {
 };
 
 export type Wallet = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   balance: number;
   paymentMethod: string;
@@ -369,14 +409,17 @@ export type Wallet = {
   lastUsedAt: Date | null;
   transactions?: Transaction[];
   balances?: Balance[];
-  userId: string;
+  playerId: string;
   isActive: boolean;
-  activeForUser?: User;
+  activeForPlayer?: Player;
   createdAt: Date;
   updatedAt: Date;
 };
 
 export type Withdrawal = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string | null;
   amount: number | null;
@@ -394,6 +437,9 @@ export type Withdrawal = {
 };
 
 export type VipRank = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   name: string;
   minXp: number;
@@ -414,6 +460,9 @@ export type VipRank = {
 };
 
 export type VipInfo = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   level: number;
   xp: number;
@@ -427,6 +476,9 @@ export type VipInfo = {
 };
 
 export type VipLevel = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   parentId: string;
   minXpNeeded: number | null;
@@ -442,6 +494,9 @@ export type VipLevel = {
 };
 
 export type VipCashback = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string | null;
   amount: number;
@@ -454,6 +509,9 @@ export type VipCashback = {
 };
 
 export type VipLevelUpBonus = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string;
   amount: number;
@@ -465,6 +523,9 @@ export type VipLevelUpBonus = {
 };
 
 export type VipSpinReward = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string;
   amount: number;
@@ -475,6 +536,9 @@ export type VipSpinReward = {
 };
 
 export type Affiliate = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playername: string;
   firstName: string;
@@ -493,6 +557,9 @@ export type Affiliate = {
 };
 
 export type AffiliateLog = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   invitorId: string;
   childId: string;
@@ -512,6 +579,9 @@ export type AffiliateLog = {
 };
 
 export type Setting = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   name: string;
   referralCodeCount: number;
@@ -529,6 +599,9 @@ export type Setting = {
 };
 
 export type Games = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   name: string;
   title: string | null;
@@ -581,6 +654,9 @@ export type Games = {
 };
 
 export type Commission = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   master: number;
   affiliate: number;
@@ -592,6 +668,9 @@ export type Commission = {
 };
 
 export type OperatorSettlement = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   operatorId: string;
   weekStartDate: Date;
@@ -608,6 +687,9 @@ export type OperatorSettlement = {
 };
 
 export type LoyaltyFundTransaction = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   type: LoyaltyFundTransactionType;
   amount: number;
@@ -622,6 +704,9 @@ export type LoyaltyFundTransaction = {
 };
 
 export type Balance = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string;
   currencyId: string;
@@ -637,6 +722,9 @@ export type Balance = {
 };
 
 export type PlayerBonus = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   playerId: string;
   bonusId: string;
@@ -652,6 +740,9 @@ export type PlayerBonus = {
 };
 
 export type Bonus = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   name: string;
   description: string;
@@ -675,6 +766,9 @@ export type Bonus = {
 };
 
 export type Progress = {
+  /**
+   * drizzle.default @paralleldrive/cuid2::createId
+   */
   id: string;
   sum: number;
   type: ProgressTypeEnum;
