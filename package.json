@@ -25,6 +25,7 @@
     "lint": "bun run check:eslint && bun run check:stylelint",
     "lint:inspect": "bunx @eslint/config-inspector",
     "update": "bunx taze -I -rwi",
+    "db:view": "concurrently \"bun drizzle-kit studio --config src/drizzle.config.ts\" \"pnpm dlx drizzle-lab visualizer\" \"sleep 1 && pnpm dlx drizzle-view\"",
     "seed:dev": "cd backend && bun run --watch src/seed/seed.ts",
     "generate": "bunx prisma generate && cd backend && bunx drizzle-kit generate && bunx drizzle-kit push"
   },
@@ -32,9 +33,9 @@
     "schema": "backend/prisma/schema.prisma"
   },
   "dependencies": {
-   
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
-   
+    "@types/nanoid": "^3.0.0"
   }
 }

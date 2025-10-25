@@ -8,11 +8,11 @@
             "type": "bun",
             "internalConsoleOptions": "neverOpen",
             "request": "launch",
-            "name": "Debug Seed",
-            "program": "${workspaceFolder}/backend/src/seed/seed.ts",
+            "name": "Seed",
+            "program": "${workspaceFolder}/back`end/src/seed/seed.ts",
             "cwd": "${workspaceFolder}",
             "stopOnEntry": false,
-            "watchMode": false
+            "watchMode": true
         },
             {
             "type": "bun",

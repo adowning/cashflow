@@ -2,7 +2,7 @@ import db from '@backend/database';
 import type { User } from '@backend/database/interfaces';
 import { users } from '@/database/schema';
 import type { z } from '@hono/zod-openapi';
-import { eq, ilike, or } from 'drizzle-orm';
+import { eq, ilike, or, asc } from 'drizzle-orm';
 import type { createInsertSchema } from 'drizzle-zod';
 // import { createUser } from '../controllers/user.controller.v2';
 
@@ -48,9 +48,15 @@ export function findUserById(id: string)
 {
   return db.select().from(users).where(eq(users.id, id));
 }
-export function getUsers()
+export async  function getUsers(page: number, pageSize: number)
 {
-  return db.select().from(users);
+  // return db.select().from(users);
+  return await db
+  .select()
+  .from(users)
+  .orderBy(asc(users.id)) // order by is mandatory
+  .limit(pageSize) // the number of rows to return
+  .offset((page - 1) * pageSize); // the number of rows to skip
 }
 export function updateUser(id: string, data: z.infer<ReturnType<typeof createInsertSchema>>)
 {

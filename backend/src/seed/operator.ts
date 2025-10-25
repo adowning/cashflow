@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import db from '../database/index';
-import * as schema from '../database/_schema';
+import * as schema from '../database/schema';
 
 // This is the single, hardcoded operator for the entire system.
 // Using a deterministic ID makes it easy to reference in other seeds.
@@ -20,7 +20,6 @@ const defaultOperator = {
 export async function seedOperator()
 {
   console.log('🏢 Seeding default operator...');
-console.log(schema.operators);
   // onConflictDoNothing prevconsoents errors if the operator already exists.
   await db
     .insert(schema.operators)

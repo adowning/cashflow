@@ -18,7 +18,6 @@ import type {
 	ChartDataPoint,
 	PaginatedTransactions,
 } from "@/types/dashboard";
-import { client } from '@/client/client'
 
 /**
  * Centralized store for dashboard data management.
@@ -191,12 +190,17 @@ export const useDashboardStore = defineStore("dashboard", () => {
 		if (filters) {
 			playerFilters.value = { ...playerFilters.value, ...filters };
 		}
-		client.users.$post({
-			body:{
-				   title: 'Hello',
-    body: 'Hono is a cool project',
-			}
-		})
+		return
+		// api.users.$get({
+		// 	query:{ 
+		// 		page:0,
+		// 		perPage: 10
+		// 	}})
+	// 		body:{
+	// 			   title: 'Hello',
+    // body: 'Hono is a cool project',
+	// 		}
+		// })
 		isLoadingPlayers.value = true;
 		playersError.value = null;
 

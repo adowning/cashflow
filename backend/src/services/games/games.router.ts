@@ -7,6 +7,8 @@ import { createRoute,  } from '@hono/zod-openapi';
 import * as HttpStatusCodes from 'stoker/http-status-codes';
 import { jsonContent } from 'stoker/openapi/helpers';
 import * as controller from './games.controller';
+import chalk from 'chalk'
+import * as service from './games.service';
 
 
 // const getGameCategories = createRoute({
@@ -245,21 +247,28 @@ import * as controller from './games.controller';
 //   },
 // });
 
-export const getAllGamesRoute = createRoute({
-  method: 'get',
-  path: '/games/all',
-  tags: ['Games'],
-  responses: {
-    [HttpStatusCodes.OK]: jsonContent(
-      GamesResponseSchema,
-      'List of all games'
-    ),
-    [HttpStatusCodes.BAD_REQUEST]: jsonContent(badRequestSchema, 'Bad Request'),
-  },
-},
+// export const getAllGamesRoute = createRouter().get({
+  
+//   method: 'get',
+//   path: '/games/all',
+//   tags: ['Games'],
+//   responses: {
+//     [HttpStatusCodes.OK]: jsonContent(
+//       GamesResponseSchema,
+//       'List of all games'
+//     ),
+//     [HttpStatusCodes.BAD_REQUEST]: jsonContent(badRequestSchema, 'Bad Request'),
+//   },
+// },
 
-)
+// )
+const router = createRouter().get("/games/all", async (c) => {
+ console.log(chalk.yellow('get all games started'));
+  const data = await service.findAllGames();
+  return c.json(data);
+})
 
+export default router;
 // const router = createRouter();
 
 // Public routes - no authentication or session required
@@ -278,4 +287,4 @@ export const getAllGamesRoute = createRoute({
 // router.openapi(checkSession, controller.checkSession);
 // router.openapi(getTopWins, controller.getTopWins);
 
-export const gameRoutes = router;
+// export const gameRoutes = router;

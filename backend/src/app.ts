@@ -7,8 +7,8 @@ import { join } from 'path';
 import createApp from './lib/create-app';
 import configureOpenAPI from './lib/configure-open-api';
 import { authRoutes } from './services/auth/auth.router';
-import { getAllGamesRoute } from './services/games/games.router';
-import { userRoutes } from './services/user/routes/user.router';
+import games from './services/games/games.router';
+import users from './services/user/routes/user.router';
 import { dashboardRoutes } from './services/dashboard/dashboard.router';
 
 const app = createApp();
@@ -59,9 +59,9 @@ configureOpenAPI(app);
 // const api =  createApp();
 
 const routes = [
-  // userRoutes,
+  users,
   // authRoutes,
-  getAllGamesRoute,
+  games,
   // dashboardRoutes,
 ] as const;
 
@@ -69,7 +69,7 @@ const routes = [
 // const routes = []
 routes.forEach((route) => {
   // app.route('/', route);
-    // app.basePath("/api").route("/", route);
+     app.basePath("/api").route("/", route);
 
 });
 // const routes = app.route('/auth', authRoutes).route('/games', gameRoutes).route('/users', userRoutes).route('/dashboard', dashboardRoutes)
@@ -77,7 +77,7 @@ routes.forEach((route) => {
 // Mount the API router to the main app instance
 // app.route('/api', routes);
 
-export type AppType = typeof app;
+export type AppType = (typeof routes)[number];
 
 console.log('[DEBUG] API routes registered under /api.');
 

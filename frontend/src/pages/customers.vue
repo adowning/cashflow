@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { getAllUsersQueryOptions } from '@/client/api'
 import { useDashboardStore } from '@/stores/dashboard.store'
+import { debounce } from '@/utils/debounce'
 import type { TableColumn } from '@nuxt/ui'
 import { getPaginationRowModel, type Row } from '@tanstack/table-core'
+import { useQuery } from '@tanstack/vue-query'
+import type { User } from 'better-auth'
 import { upperFirst } from 'scule'
 import { computed, h, onMounted, ref, resolveComponent, useTemplateRef, watch } from 'vue'
 
@@ -12,8 +16,16 @@ const UDropdownMenu = resolveComponent( 'UDropdownMenu' );
 const UCheckbox = resolveComponent( 'UCheckbox' );
 
 const toast = useToast();
-const table = useTemplateRef( 'table' );
+const table = useTemplateRef('table');
 const dashboardStore = useDashboardStore();
+/**
+ * Pagination state for the players table.
+ */
+const pagination = ref( {
+  pageIndex: 1,
+  pageSize: 10,
+  query: 'asdf'
+} );
 
 const columnFilters = ref( [ {
   id: 'email',
@@ -21,34 +33,67 @@ const columnFilters = ref( [ {
 } ] );
 const columnVisibility = ref();
 const rowSelection = ref( { 1: true } );
+  const page = ref(0)
+  const perPage = ref(20)
+const search = ref('')
+const mappedPlayers2 = ref()
+ const debouncedSearch = useDebounceFn((val) => {
+  // do something
+  search.value = val
+  return search.value
+}, 1000)
+
+const { isPending, error, data } = useQuery(
+    getAllUsersQueryOptions({
+      query: pagination.value.query,
+     page: pagination.value.pageIndex,
+     perPage: pagination.value.pageSize,
+    }),
+  );
+
+ watch(data, (data) => {
+  if(data && data.length)
+    mappedPlayers2.value  = data.map( player => ( {
+    id: player.id,
+    name: player.name,
+    email: player.email || '',
+    avatar: { src: player.image, alt: player.name },
+    status: player.banned ? 'banned' : 'active',//.status.toLowerCase() as 'active' | 'inactive' | 'banned',
+    location: '', // This field is being replaced with lastLoginAt
+    lastLoginAt: player.createdAt,
+    username: player.name,
+    avatarUrl: player.name
+  } ) );
+    });
 
 /**
  * Map API player data to the format expected by the table component.
  * Transforms DashboardPlayer[] to the internal User type for compatibility.
  */
 const mappedPlayers = computed( () => {
-  return dashboardStore.players.map( player => ( {
+  if(data.value && data.value.length)
+  return data.value.map( player => ( {
     id: player.id,
-    name: player.username,
+    name: player.name,
     email: player.email || '',
-    avatar: { src: player.avatarUrl, alt: player.username },
-    status: player.status.toLowerCase() as 'active' | 'inactive' | 'banned',
+    avatar: { src: player.image, alt: player.name },
+    status: player.banned ? 'banned' : 'active',//.status.toLowerCase() as 'active' | 'inactive' | 'banned',
     location: '', // This field is being replaced with lastLoginAt
-    lastLoginAt: player.lastLoginAt,
-    username: player.username,
-    avatarUrl: player.avatarUrl
+    lastLoginAt: player.createdAt,
+    username: player.name,
+    avatarUrl: player.name
   } ) );
 } );
 
 /**
  * Check if players data is currently loading.
  */
-const isLoading = computed( () => dashboardStore.isLoadingPlayers );
+// const isLoading = computed( () => dashboardStore.isLoadingPlayers );
 
 /**
  * Check if there's an error loading players data.
  */
-const hasError = computed( () => Boolean( dashboardStore.playersError ) );
+// const hasError = computed( () => Boolean( dashboardStore.playersError ) );
 
 /**
  * Generate action menu items for each player row.
@@ -239,13 +284,6 @@ watch( () => statusFilter.value, ( newVal ) => {
   }
 } );
 
-/**
- * Pagination state for the players table.
- */
-const pagination = ref( {
-  pageIndex: 0,
-  pageSize: 10
-} );
 
 /**
  * Initialize the component by fetching players data.
@@ -271,13 +309,14 @@ onMounted( async () => {
 
     <template #body>
       <div class="flex flex-wrap items-center justify-between gap-1.5">
-        <UInput
+        <!-- <UInput
           :model-value=" ( table?.tableApi?.getColumn( 'email' )?.getFilterValue() as string ) "
           class="max-w-sm"
           icon="i-lucide-search"
           placeholder="Filter emails..."
           @update:model-value="table?.tableApi?.getColumn( 'email' )?.setFilterValue( $event )"
-        />
+        /> -->  
+        <UInput v-model="search" class="max-w-sm" placeholder="Filter..." />
 
         <div class="flex flex-wrap items-center gap-1.5">
           <CustomersDeleteModal :count=" table?.tableApi?.getFilteredSelectedRowModel().rows.length ">
@@ -338,7 +377,7 @@ onMounted( async () => {
 
       <!-- Loading State -->
       <div
-        v-if=" isLoading "
+        v-if=" isPending "
         class="space-y-4"
       >
         <div
@@ -358,7 +397,7 @@ onMounted( async () => {
 
       <!-- Error State -->
       <UAlert
-        v-else-if=" hasError "
+        v-else-if=" error "
         icon="i-lucide-alert-circle"
         color="error"
         variant="soft"
@@ -381,7 +420,7 @@ onMounted( async () => {
         class="shrink-0"
         :data=" mappedPlayers "
         :columns=" columns "
-        :loading=" isLoading "
+        :loading=" isPending "
         :ui=" {
           base: 'table-fixed border-separate border-spacing-0',
           thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',

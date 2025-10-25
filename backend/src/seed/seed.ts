@@ -27,7 +27,7 @@ import { seedPlayerBonuses } from './playerBonuses';
 
 // --- Script Configuration ---
 const RESET_DATABASE = true;
-const USER_COUNT = 1;
+const USER_COUNT = 3;
 // Number of users to seed, adjust as needed
 // --- End Configuration ---
 
@@ -35,19 +35,17 @@ async function main()
 {
 
   // Store a value in the cache
-  // console.log(cache);
-  cache.set('greeting', 'Hello, World!');
+  // cache.set('greeting', 'Hello, World!');
 
   // Retrieve the value
-  const greeting = cache.get('greeting');
-  console.log(greeting); // "Hello, World!"
-  // Store with an expiration time (TTL) of 60 seconds
-  cache.set('temporaryValue', { data: 'This will expire' }, 60);
+  // const greeting = cache.get('greeting');
+  // // Store with an expiration time (TTL) of 60 seconds
+  // cache.set('temporaryValue', { data: 'This will expire' }, 60);
 
-  // Check if a key exists
-  if (cache.has('greeting')) {
-    console.log('Greeting exists in cache');
-  }
+  // // Check if a key exists
+  // if (cache.has('greeting')) {
+  //   console.log('Greeting exists in cache');
+  // }
   console.log(chalk.blue('🚀 Starting database seeding process...'));
   const startTime = Date.now();
 

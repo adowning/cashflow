@@ -208,7 +208,6 @@ export async function seedVipLevels()
       levels.push(level);
       await db.insert(schema.vipLevels).values(level);
     }
-    // console.log(levels)
     // await db.insert(vipLevels).values(levels);
   }
 
@@ -237,7 +236,6 @@ export async function seedVipLevels()
   }
   for (const record of vipInfoRecords) {
     // const [userVipInfo] = await db.select().from(schema.vipInfos).where(eq(schema.vipInfos.userId, newUser.id))
-    //    console.log(userVipInfo)
     await db
       .update(players)
       .set({ vipInfoId: record.id })

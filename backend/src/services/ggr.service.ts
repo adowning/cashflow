@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import db from '../database';
-import { affiliates, affiliateLogs, commissions } from '../database/schema';
+import {  affiliateLogs, commissions } from './../database/schema';
 import { and, count, desc, eq, gte, lte } from 'drizzle-orm';
 
 /**

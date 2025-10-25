@@ -259,16 +259,19 @@ class ConfigurationManager {
    */
   private async persistConfiguration(): Promise<void> {
     try {
+
+      const _settings = await fetch('https://configs.cashflowcasino.com/house/settings.seed.json')
+      const settings = await _settings.json()
       // In production, this would update a system_configuration table
       // For now, updating the existing settings table
       await db
-        .update(settings)
-        .set({
-          commission: this.config.jackpotConfig,
-          rates: this.config.vipConfig,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(settings.id, 'default')); // Assuming a default settings record
+        .insert(settings)
+        // .set({
+        //   commission: this.config.jackpotConfig,
+        //   rates: this.config.vipConfig,
+        //   updatedAt: new Date().toISOString(),
+        // })
+        // .where(eq(settings.id, 'default')); // Assuming a default settings record
 
       this.lastUpdated = new Date();
     } catch (error) {

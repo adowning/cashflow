@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
 import { endOfWeek, startOfWeek, subWeeks } from 'date-fns';
 import { nanoid } from 'nanoid';
 
-const tableNames = ['affiliates', 'affiliate_logs'];
+const tableNames = [ 'affiliate_logs'];
 
 const truncateQuery = `TRUNCATE TABLE ${tableNames.map((name) => `"${name}"`).join(', ')} RESTART IDENTITY CASCADE;`;
 

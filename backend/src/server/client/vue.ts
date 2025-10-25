@@ -67,7 +67,7 @@ export function useBroadcast(options: UseBroadcastOptions) {
 /**
  * Use channel composable
  */
-export function useChannel<T = any>(
+export function useBChannel<T = any>(
   client: BroadcastClient | Ref<BroadcastClient>,
   channelName: string | Ref<string>,
   eventHandlers?: Record<string, EventCallback<T>>,
