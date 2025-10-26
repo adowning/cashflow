@@ -1,13 +1,10 @@
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import db from '@/database';
-import { playerBalances } from '@/database/schema/views.schema';
 import { players } from '@/database/schema/core.schema';
 import { processBet } from '@/features/gameplay/bet-orchestration.service';
 import { auth } from '@/lib/auth';
-import { createBalanceForNewUser } from './balance-management.service';
-import { users, accounts } from '@/database/schema/auth.schema';
-import { nanoid } from 'nanoid';
+import { users } from '@/database/schema/auth.schema';
 
 interface BotConfig {
   betInterval: number; // in milliseconds

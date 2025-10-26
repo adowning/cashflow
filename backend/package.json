@@ -28,6 +28,7 @@
     "@stacksjs/ts-cache": "^0.1.2",
     "axios": "^1.12.2",
     "backend": "workspace:*",
+    "backend": "workspace:*",
     "better-auth": "^1.3.27",
     "bun-ws-router": "^0.6.1",
     "bunfig": "^0.15.0",
