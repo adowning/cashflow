@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashflow Dashboard</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 20px; }
+        .container { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .stat-item { background: #f8f9fa; padding: 10px; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        button { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; margin: 5px; }
+        input { padding: 5px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Cashflow Dashboard</h1>
+
+    <div class="container">
+        <h3>Login</h3>
+        <input id="username" placeholder="Username">
+        <input id="password" type="password" placeholder="Password">
+        <button id="login">Login</button>
+    </div>
+
+    <div class="container">
+        <h3>Reports</h3>
+        <button id="dailyBtn">Daily Report</button>
+        <button id="transactionBtn">Transaction Report</button>
+        <button id="generalBtn">General Graph</button>
+        <button id="tokenBtn">Token Report</button>
+        <button id="userBtn">User Report</button>
+        <button id="gameBtn">Game Report</button>
+    </div>
+
+    <div id="results" class="container"></div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        document.getElementById('login').onclick = async () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const res = await fetch('/api/auth/sign-in/username', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.token);
+                alert('Logged in');
+            } else {
+                alert('Login failed');
+            }
+        };
+
+        async function fetchReport(type, params = {}) {
+            const token = localStorage.getItem('token');
+            const query = new URLSearchParams(params).toString();
+            const res = await fetch(`/statistic/dashboard/${type}?${query}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const { data } = await res.json();
+                displayData(type, data);
+            } else {
+                resultsDiv.innerHTML = '<p>Error fetching data</p>';
+            }
+        }
+
+        function displayData(type, data) {
+            let html = `<h3>${type.toUpperCase()} Report</h3>`;
+            if (type === 'daily' || type === 'transaction') {
+                html += '<div class="stats">';
+                for (const [key, value] of Object.entries(data)) {
+                    html += `<div class="stat-item"><strong>${key}:</strong> ${value}</div>`;
+                }
+                html += '</div>';
+            } else if (type === 'general') {
+                html += '<p>Time: ' + data.time.join(', ') + '</p>';
+                html += '<p>Turnover: ' + data.turnOver.join(', ') + '</p>';
+                html += '<p>GGR: ' + data.ggr.join(', ') + '</p>';
+                html += '<p>Active Players: ' + data.activePlayer.join(', ') + '</p>';
+                html += '<p>New Players: ' + data.newPlayer.join(', ') + '</p>';
+            } else if (Array.isArray(data)) {
+                html += '<table><thead><tr>';
+                if (data.length > 0) {
+                    Object.keys(data[0]).forEach(key => html += `<th>${key}</th>`);
+                    html += '</tr></thead><tbody>';
+                    data.forEach(item => {
+                        html += '<tr>';
+                        Object.values(item).forEach(val => html += `<td>${val}</td>`);
+                        html += '</tr>';
+                    });
+                }
+                html += '</tbody></table>';
+            }
+            resultsDiv.innerHTML = html;
+        }
+
+        document.getElementById('dailyBtn').onclick = () => fetchReport('daily');
+        document.getElementById('transactionBtn').onclick = () => fetchReport('transaction');
+        document.getElementById('generalBtn').onclick = () => fetchReport('general');
+        document.getElementById('tokenBtn').onclick = () => fetchReport('token', { sortKey: 'deposit', sortDirection: 'desc' });
+        document.getElementById('userBtn').onclick = () => fetchReport('user', { sortKey: 'ggr', sortDirection: 'desc' });
+        document.getElementById('gameBtn').onclick = () => fetchReport('game', { sortKey: 'ggr' });
+    </script>
+</body>
+</html>

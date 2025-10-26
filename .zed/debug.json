@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "javascript",
+      "name": "Debug Dev",
+      "request": "launch",
+      "program": "bun",
+      "args": ["run", "scripts/dev.ts"],
+      "cwd": "${workspaceFolder}",
+      "watchMode": true
+    },
+    {
+      "type": "javascript",
+      "name": "Debug Dev Server",
+      "request": "launch",
+      "program": "bun",
+      "args": ["run", "scripts/dev-server.ts"],
+      "cwd": "${workspaceFolder}",
+      "watchMode": true
+    },
+    {
+      "type": "javascript",
+      "name": "Debug Tests",
+      "request": "launch",
+      "program": "bun",
+      "args": ["test"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

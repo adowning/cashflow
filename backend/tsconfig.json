@@ -2,9 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "jsx": "preserve",
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "moduleDetection": "force",
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -22,21 +20,13 @@
     "composite": true,
     "outDir": "./dist",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "#/*": [
-        "./src/*"
-      ],
-      "@@/*": [
-        "./*"
-      ],
-      "@backend/*": [
-        "./src/*"
-      ],
+      "@/*": ["./*"],
+      "#/*": ["./*"],
+      "@@/*": ["./*"],
+      "@backend/*": ["./*"]
     }
   },
-     "exclude": [
+  "exclude": [
     "**/dist/**",
     "**/data/**",
     "**/node_modules/**",
