@@ -2,7 +2,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import type { Settings } from '@@/database/schema/other.schema.js';
-import { playerBalances, type PlayerBalance } from '@@/database/schema/views.schema.js';
+import { TPlayerBalancess, type TTPlayerBalancess } from '@@/database/schema/gameplay.schema.js';
 
 // Input validation schemas
 const PositiveInt = z.number().int().positive('Amount must be a positive integer (cents).');
@@ -48,7 +48,7 @@ export type WithdrawInput = z.infer<typeof WithdrawSchema>;
 
 // --- 3. PUBLIC TYPE DEFINITIONS (API OUTPUTS) ---
 
-export interface PlayerBalances {
+export interface TPlayerBalancess {
   playerId: string;
   realBalance: number;
   bonusBalance: number;
@@ -97,11 +97,11 @@ export class WageringManager {
   /**
    * Retrieves a player's balance, creating one if it doesn't exist.
    */
-  private async getOrCreateBalance(playerId: string): Promise<PlayerBalance> {
+  private async getOrCreateBalance(playerId: string): Promise<TPlayerBalances> {
     const balances = await this.db
       .select()
-      .from(playerBalances)
-      .where(eq(playerBalances.playerId, playerId))
+      .from(TPlayerBalancess)
+      .where(eq(TPlayerBalancess.playerId, playerId))
       .limit(1);
 
     if (balances.length > 0) {
@@ -110,7 +110,7 @@ export class WageringManager {
 
     // Create a new balance
     const newBalance = { playerId };
-    const insertedBalances = await this.db.insert(playerBalances).values(newBalance).returning();
+    const insertedBalances = await this.db.insert(TPlayerBalancess).values(newBalance).returning();
 
     return insertedBalances[0];
   }
@@ -119,7 +119,7 @@ export class WageringManager {
    * Applies wagering to all active requirements and checks for bonus conversion.
    * This is a core private method.
    */
-  private _applyWagering(balance: PlayerBalance, wagerAmount: number): PlayerBalance {
+  private _applyWagering(balance: TPlayerBalances, wagerAmount: number): TPlayerBalances {
     // 1. Reduce all active wagering requirements
     balance.depositWRRemaining = Math.max(0, balance.depositWRRemaining - wagerAmount);
     balance.bonusWRRemaining = Math.max(0, balance.bonusWRRemaining - wagerAmount);
@@ -143,21 +143,21 @@ export class WageringManager {
    * Handles a player deposit.
    * Credits real balance and adds a 1x (or platform-defined) deposit wagering requirement.
    */
-  public async handleDeposit(input: DepositInput): Promise<PlayerBalance> {
+  public async handleDeposit(input: DepositInput): Promise<TPlayerBalances> {
     const { playerId, amount } = DepositSchema.parse(input);
     const balance = await this.getOrCreateBalance(playerId);
 
     const depositWROwed = amount * this.settings.depositWRMultiplier;
 
     const updatedBalances = await this.db
-      .update(playerBalances)
+      .update(TPlayerBalancess)
       .set({
         realBalance: balance.realBalance + amount,
         totalDeposited: balance.totalDeposited + amount,
         depositWRRemaining: balance.depositWRRemaining + depositWROwed,
         updatedAt: new Date(),
       })
-      .where(eq(playerBalances.playerId, playerId))
+      .where(eq(TPlayerBalancess.playerId, playerId))
       .returning();
 
     return updatedBalances[0];
@@ -167,21 +167,21 @@ export class WageringManager {
    * Grants a cash bonus to a player.
    * Credits bonus balance and adds a 30x (or platform-defined) bonus wagering requirement.
    */
-  public async grantBonus(input: GrantBonusInput): Promise<PlayerBalance> {
+  public async grantBonus(input: GrantBonusInput): Promise<TPlayerBalances> {
     const { playerId, amount } = GrantBonusSchema.parse(input);
     const balance = await this.getOrCreateBalance(playerId);
 
     const bonusWROwed = amount * this.settings.bonusWRMultiplier;
 
     const updatedBalances = await this.db
-      .update(playerBalances)
+      .update(TPlayerBalancess)
       .set({
         bonusBalance: balance.bonusBalance + amount,
         totalBonusGranted: balance.totalBonusGranted + amount,
         bonusWRRemaining: balance.bonusWRRemaining + bonusWROwed,
         updatedAt: new Date(),
       })
-      .where(eq(playerBalances.playerId, playerId))
+      .where(eq(TPlayerBalancess.playerId, playerId))
       .returning();
 
     return updatedBalances[0];
@@ -191,17 +191,17 @@ export class WageringManager {
    * Grants free spins to a player.
    * This increases the free spins counter. Liability is tracked separately.
    */
-  public async grantFreeSpins(input: GrantFreeSpinsInput): Promise<PlayerBalance> {
+  public async grantFreeSpins(input: GrantFreeSpinsInput): Promise<TPlayerBalances> {
     const { playerId, count } = GrantFreeSpinsSchema.parse(input);
     const balance = await this.getOrCreateBalance(playerId);
 
     const updatedBalances = await this.db
-      .update(playerBalances)
+      .update(TPlayerBalancess)
       .set({
         freeSpinsRemaining: balance.freeSpinsRemaining + count,
         updatedAt: new Date(),
       })
-      .where(eq(playerBalances.playerId, playerId))
+      .where(eq(TPlayerBalancess.playerId, playerId))
       .returning();
 
     return updatedBalances[0];
@@ -211,7 +211,7 @@ export class WageringManager {
    * Handles a single bet (spin) from a player.
    * This deducts from balances and applies wagering.
    */
-  public async handleBet(input: BetInput): Promise<PlayerBalance> {
+  public async handleBet(input: BetInput): Promise<TPlayerBalances> {
     const { playerId, betAmount, isFreeSpin } = BetSchema.parse(input);
     let balance = await this.getOrCreateBalance(playerId);
 
@@ -244,9 +244,9 @@ export class WageringManager {
 
     // Save all changes
     const updatedBalances = await this.db
-      .update(playerBalances)
+      .update(TPlayerBalancess)
       .set({ ...balance, updatedAt: new Date() }) // Drizzle doesn't like the extra 'playerId'
-      .where(eq(playerBalances.playerId, balance.playerId))
+      .where(eq(TPlayerBalancess.playerId, balance.playerId))
       .returning();
 
     return updatedBalances[0];
@@ -256,7 +256,7 @@ export class WageringManager {
    * Handles a win from a bet.
    * This credits balances and, if it's a free spin win, adds a new wagering requirement.
    */
-  public async handleWin(input: WinInput): Promise<PlayerBalance> {
+  public async handleWin(input: WinInput): Promise<TPlayerBalances> {
     const { playerId, winAmount, isFreeSpinWin } = WinSchema.parse(input);
     if (winAmount === 0) return this.getOrCreateBalance(playerId); // No changes on a 0 win
 
@@ -285,7 +285,7 @@ export class WageringManager {
 
     // Save changes
     const updatedBalances = await this.db
-      .update(playerBalances)
+      .update(TPlayerBalancess)
       .set({
         totalWon: balance.totalWon,
         bonusBalance: balance.bonusBalance,
@@ -294,7 +294,7 @@ export class WageringManager {
         bonusWRRemaining: balance.bonusWRRemaining,
         updatedAt: new Date(),
       })
-      .where(eq(playerBalances.playerId, playerId))
+      .where(eq(TPlayerBalancess.playerId, playerId))
       .returning();
 
     return updatedBalances[0];
@@ -304,7 +304,7 @@ export class WageringManager {
    * Handles a player withdrawal request.
    * Enforces wagering requirements and bonus forfeiture.
    */
-  public async handleWithdraw(input: WithdrawSchema): Promise<PlayerBalance> {
+  public async handleWithdraw(input: WithdrawSchema): Promise<TPlayerBalances> {
     const { playerId, amount } = WithdrawSchema.parse(input);
     const balance = await this.getOrCreateBalance(playerId);
 
@@ -337,7 +337,7 @@ export class WageringManager {
 
     // Save changes
     const updatedBalances = await this.db
-      .update(playerBalances)
+      .update(TPlayerBalancess)
       .set({
         realBalance: balance.realBalance,
         totalWithdrawn: balance.totalWithdrawn,
@@ -345,7 +345,7 @@ export class WageringManager {
         bonusWRRemaining: balance.bonusWRRemaining,
         updatedAt: new Date(),
       })
-      .where(eq(playerBalances.playerId, playerId))
+      .where(eq(TPlayerBalancess.playerId, playerId))
       .returning();
 
     return updatedBalances[0];
@@ -356,7 +356,7 @@ export class WageringManager {
   /**
    * Gets the current balances and WR status for a player.
    */
-  public async getPlayerBalances(playerId: string): Promise<PlayerBalances> {
+  public async getTPlayerBalancess(playerId: string): Promise<TPlayerBalancess> {
     const balance = await this.getOrCreateBalance(playerId);
     return {
       playerId: balance.playerId,
@@ -399,14 +399,17 @@ export class WageringManager {
     };
   }
 
-  public async updateWageringProgress(input: { userId: string, wagerAmount: number }): Promise<PlayerBalance> {
+  public async updateWageringProgress(input: {
+    userId: string;
+    wagerAmount: number;
+  }): Promise<TPlayerBalances> {
     const { userId, wagerAmount } = input;
     let balance = await this.getOrCreateBalance(userId);
     balance = this._applyWagering(balance, wagerAmount);
     const updatedBalances = await this.db
-      .update(playerBalances)
+      .update(TPlayerBalancess)
       .set({ ...balance, updatedAt: new Date() })
-      .where(eq(playerBalances.playerId, balance.playerId))
+      .where(eq(TPlayerBalancess.playerId, balance.playerId))
       .returning();
     return updatedBalances[0];
   }

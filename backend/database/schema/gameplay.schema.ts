@@ -55,6 +55,10 @@ export const playerBalances = pgTable('player_balances', {
 export const ZPlayerBalances = createSelectSchema(playerBalances);
 export type TPlayerBalances = z.infer<typeof ZPlayerBalances>;
 
+// Export the table for use in other modules
+export const TPlayerBalancess = playerBalances;
+export type TTPlayerBalancess = TPlayerBalances;
+
 export const PlatformSettingsSchema = createSelectSchema(platformSettings);
 export type PlatformSettings = z.infer<typeof PlatformSettingsSchema>;
 

@@ -1,7 +1,7 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import db from '@@/database/index.js';
 import { playerBonuses, bonuses } from '@@/database/schema';
-import { playerBalances } from '@@/database/schema/views.schema.js';
+import { playerBalances } from '@@/database/schema/gameplay.schema.js';
 
 /**
  * Balance management system for real vs bonus balance handling
@@ -53,27 +53,24 @@ export interface BalanceAdditionRequest {
   gameId?: string;
 }
 
-export interface BalanceOperation
-{
-  userId: string
-  amount: number // Amount in cents
-  reason: string
-  gameId?: string
-  operatorId?: string
+export interface BalanceOperation {
+  userId: string;
+  amount: number; // Amount in cents
+  reason: string;
+  gameId?: string;
+  operatorId?: string;
 }
 
-export interface BalanceCheck
-{
-  playerId: string
-  amount: number // Amount in cents
+export interface BalanceCheck {
+  playerId: string;
+  amount: number; // Amount in cents
 }
 
-export interface PlayerBalance
-{
-  playerId: string
-  realBalance: number
-  bonusBalance: number
-  totalBalance: number
+export interface PlayerBalance {
+  playerId: string;
+  realBalance: number;
+  bonusBalance: number;
+  totalBalance: number;
 }
 
 /**
@@ -91,10 +88,7 @@ async function deductFromBonusBalance(
 }> {
   // Get active bonuses ordered by creation date (FIFO)
   const activeBonuses = await tx.query.playerBonuses.findMany({
-    where: and(
-      eq(playerBonuses.playerId, playerId), 
-      eq(playerBonuses.status, 'pending'),
-    ),
+    where: and(eq(playerBonuses.playerId, playerId), eq(playerBonuses.status, 'pending')),
     with: {
       bonus: true,
     },
@@ -311,7 +305,7 @@ export async function addWinnings(
     const creditResult = await creditToBalance(
       request.playerId,
       request.amount,
-      request.balanceType
+      request.balanceType,
     );
 
     return creditResult;
@@ -447,9 +441,7 @@ export async function getWageringProgress(playerId: string): Promise<{
 /**
  * Create a balance record for a new user
  */
-export async function createBalanceForNewUser(
-  playerId: string
-): Promise<void> {
+export async function createBalanceForNewUser(playerId: string): Promise<void> {
   await db.insert(playerBalances).values({
     playerId: playerId,
   });
@@ -577,7 +569,7 @@ export async function creditToBalance(
         newBalance = Number(currentBalance.bonusBalance) + amount;
         updateField = { bonusBalance: newBalance };
       }
-      
+
       // Update balance atomically
       await tx
         .update(playerBalances)

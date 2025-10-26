@@ -7,13 +7,16 @@ import { startManufacturedGameplay } from './features/gameplay/bot.service';
 
 await setupDatabase();
 // Assign the server instance to a constant
-Bun.serve<UserData>({
+const server = Bun.serve<UserData>({
   port: 6001,
   fetch: app.fetch,
   websocket: wsRouter.websocket,
 });
 
-startManufacturedGameplay();
+// Start bot in background after server starts
+(async () => {
+  await startManufacturedGameplay();
+})().catch(console.error);
 //    {
 //     '/testhtml': homepageHtml,
 //   },
