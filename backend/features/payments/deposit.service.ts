@@ -1,14 +1,14 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db, { type Deposit } from '@@/database';
+import db from '@/database/index';
+import { type TDeposits as Deposit, type TPlayerBalances } from '@/database/schema';
 import { deposits } from '../../database/schema';
-import { getUserWallets } from '../wallet.service';
 import { and, eq, sql } from 'drizzle-orm';
-import { notifyBalanceChange } from '../realtime-notifications.service.js';
-import { logTransaction } from '../transaction-logging.service.js';
-import { addXpToUser } from '../vip.service.js';
-import { creditToWallet } from '../wallet.service.js';
+import { notifyBalanceChange } from '@/shared/notifications.service.js';
+import { logTransaction } from '@/shared/transaction.service.js';
+import { addXpToUser } from '@/features/user/vip.service.js';
 import { nanoid } from 'nanoid';
+import { getDetailedBalance, handleDeposit } from '../gameplay/balance-management.service';
 
 /**
  * Enhanced deposit service implementing PRD requirements
@@ -33,6 +33,7 @@ export enum PaymentMethod {
 export interface DepositRequest {
   userId: string;
   amount: number; // Amount in cents
+  bonusAmount: number; // Amount in cents
   paymentMethod: PaymentMethod;
   currency?: string;
   note?: string;
@@ -54,6 +55,7 @@ export interface WebhookConfirmation {
   senderInfo?: string;
   timestamp: Date;
   providerData?: Record<string, unknown>;
+  playerId: string;
 }
 
 export interface DepositCompletionResult {
@@ -73,13 +75,12 @@ export interface DepositCompletionResult {
 export async function initiateDeposit(request: DepositRequest): Promise<DepositResponse> {
   try {
     // Validate user exists and has active wallet
-    const userWallets = await getUserWallets(request.userId);
-    const user = userWallets[0];
-    if (!user) {
+    const playerBalance = await getDetailedBalance(request.userId);
+    if (!playerBalance) {
       return {
         success: false,
         status: DepositStatus.FAILED,
-        error: 'User wallet not found',
+        error: 'Player balance not found',
       };
     }
 
@@ -94,8 +95,9 @@ export async function initiateDeposit(request: DepositRequest): Promise<DepositR
           id: nanoid(),
           playerId: request.userId,
           amount: request.amount,
+          bonusAmount: request.bonusAmount,
           status: DepositStatus.PENDING,
-          currency: request.currency || 'USD',
+          // currency: request.currency || 'USD',
           note: request.note || referenceId,
         })
         .returning({ id: deposits.id });
@@ -138,8 +140,9 @@ export async function processDepositConfirmation(
     // Find pending deposit by transaction ID
     const pendingDeposit = await db.query.deposits.findFirst({
       where: and(
-        eq(deposits.status, DepositStatus.PENDING),
-        sql`metadata->>'referenceId' = ${confirmation.transactionId}`,
+        eq(deposits.status, 'PENDING'),
+        eq(deposits.playerId, confirmation.playerId),
+        // sql`metadata->>'referenceId' = ${confirmation.transactionId}`
       ),
     });
 
@@ -151,50 +154,14 @@ export async function processDepositConfirmation(
         error: 'No pending deposit found for this transaction',
       };
     }
-
+    if (!pendingDeposit.playerId) {
+      throw new Error('Failed to run deposit: ');
+    }
+    if (pendingDeposit.amount > confirmation.amount) {
+      throw new Error('the confirmation amount is not enough to satisfy deposit');
+    }
     const result = await db.transaction(async (tx) => {
       // Update deposit status to completed
-      await tx
-        .update(deposits)
-        .set({
-          status: DepositStatus.COMPLETED,
-          updatedAt: new Date(),
-        })
-        .where(eq(deposits.id, pendingDeposit.id));
-
-      if (pendingDeposit.playerId == null) throw new Error('this shouldnt jhappen');
-      // Credit user wallet
-      const userWallets = await getUserWallets(pendingDeposit.playerId);
-      const user = userWallets[0];
-      if (!user) {
-        throw new Error('User wallet not found');
-      }
-
-      const walletBalance = user;
-      if (!walletBalance) {
-        throw new Error('Wallet balance not found');
-      }
-
-      const creditResult = await creditToWallet(
-        walletBalance.walletId,
-        confirmation.amount,
-        'real',
-      );
-
-      if (!creditResult.success) {
-        throw new Error(`Failed to credit wallet: ${creditResult.error}`);
-      }
-
-      // Log transaction
-      console.log('DEBUG: pendingDeposit details:', {
-        id: pendingDeposit.id,
-        userId: pendingDeposit.playerId,
-        userIdType: typeof pendingDeposit.playerId,
-        isUserIdNull: pendingDeposit.playerId === null,
-        isUserIdUndefined: pendingDeposit.playerId === undefined,
-        amount: pendingDeposit.amount,
-        status: pendingDeposit.status,
-      });
 
       if (!pendingDeposit.playerId) {
         console.error('CRITICAL: pendingDeposit.playerId is null or undefined!', {
@@ -204,37 +171,78 @@ export async function processDepositConfirmation(
         });
         throw new Error('Cannot log transaction: userId is null');
       }
+      if (pendingDeposit.playerId == null) throw new Error('this shouldnt jhappen');
+      // Credit user wallet
+      const playerBalance = await getDetailedBalance(pendingDeposit.playerId);
 
-      await logTransaction({
-        userId: pendingDeposit.playerId,
-        gameId: 'DEPOSIT',
-        operatorId: 'system',
-        wagerAmount: 0,
-        winAmount: confirmation.amount,
-        betType: 'real',
-        preRealBalance: Number(walletBalance.realBalance),
-        postRealBalance: creditResult.newBalance,
-        preBonusBalance: Number(walletBalance.bonusBalance),
-        postBonusBalance: Number(walletBalance.bonusBalance),
-        ggrContribution: 0,
-        jackpotContribution: 0,
-        vipPointsAdded: 0,
-        currency: pendingDeposit.currency || 'USD',
+      if (!playerBalance) {
+        throw new Error('User wallet not found');
+      }
+
+      let creditResult: TPlayerBalances = await handleDeposit({
+        playerId: pendingDeposit.playerId,
+        amount: pendingDeposit.amount,
+        // 'real',
+        // 'deposit',
       });
+      let creditResultBonus: TPlayerBalances;
+      // let creditResultBonus = {
+      //   success: false,
+      //   newBalance: playerBalance.bonusBalance,
+      // };
+      //   if (pendingDeposit.amount > 0)
+      //     creditResult = await handleDeposit({
+      //       playerId: pendingDeposit.playerId,
+      //       amount: pendingDeposit.amount,
+      //       // 'real',
+      //       // 'deposit',
+      // });
+      // if (pendingDeposit.bonusAmount > 0)
+      //   creditResultBonus = await handleDeposit(
+      //     pendingDeposit.playerId,
+      //     pendingDeposit.amount,
+      //     'bonus',
+      //     'deposit',
+      //   );
+      // if (pendingDeposit.bonusAmount > 0)
+      //   creditResult = await handleDeposit({
+      //     playerId: pendingDeposit.playerId,
+      //     amount: pendingDeposit.amount,
+      //     // 'real',
+      //     // 'deposit',
+      //   });
+      // if (!creditResult.success) {
+      //   throw new Error(`Failed to credit wallet: ${creditResult}`);
+      // }
 
       // Apply deposit bonuses
-      const bonusResult = await applyDepositBonuses(pendingDeposit.playerId, confirmation.amount);
-
+      const xpResult = await applyDepositXpGains(pendingDeposit.playerId, pendingDeposit.amount);
+      await logTransaction({
+        playerId: pendingDeposit.playerId,
+        operatorId: 'system',
+        wagerAmount: 0,
+        realBalanceBefore: Number(playerBalance.realBalance),
+        realBalanceAfter: Number(creditResult.realBalance || playerBalance.realBalance),
+        bonusBalanceBefore: Number(playerBalance.bonusBalance),
+        bonusBalanceAfter: Number(creditResult.bonusBalance || playerBalance.bonusBalance || 0),
+        status: 'COMPLETED',
+        type: 'DEPOSIT',
+      });
+      await tx
+        .update(deposits)
+        .set({
+          status: 'COMPLETED',
+          updatedAt: new Date(),
+        })
+        .where(eq(deposits.id, pendingDeposit.id));
       return {
         success: true,
         depositId: pendingDeposit.id,
-        amount: confirmation.amount,
-        bonusApplied: bonusResult,
+        amount: creditResult.realBalance,
+        bonusAmount: creditResult.bonusBalance,
+        xpApplied: xpResult,
       };
     });
-    if (!pendingDeposit.playerId) {
-      throw new Error('Failed to credit wallet: ');
-    }
 
     // Send real-time balance notification
     await notifyBalanceChange(pendingDeposit.playerId, {
@@ -285,7 +293,7 @@ async function getPaymentInstructions(
 /**
  * Apply deposit bonuses (XP and free spins)
  */
-async function applyDepositBonuses(
+async function applyDepositXpGains(
   userId: string,
   amount: number,
 ): Promise<{ xpGained: number; freeSpinsAwarded: number }> {
@@ -344,7 +352,7 @@ export async function getDepositStatus(depositId: string): Promise<{
   error?: string;
 } | null> {
   try {
-    const deposit = (await db.query.deposits.findFirst({
+    const deposit: any = (await db.query.deposits.findFirst({
       where: eq(deposits.id, depositId),
     })) as Deposit | undefined;
 

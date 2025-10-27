@@ -2,10 +2,11 @@
 /** biome-ignore-all lint/suspicious/noTsIgnore: <> */
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db from "../../database/index";
-import * as schema from "../../database/schema";
+import db from "./index";
+import * as schema from "./schema";
 
-import * as rawgames from "./json/games_large.json";
+import { rawgames } from "./json/games_large";
+import { createId } from "@paralleldrive/cuid2";
 
 // Type definition for the games JSON data
 interface RawGameData {
@@ -72,44 +73,77 @@ export async function seedGames() {
   const GAMES: any[] = [];
   //@ts-ignore
   //@ts-ignore
-  for (const game of rawgames.default as RawGameData[]) {
-    // Basic setup
-    game.category = game.gamebank.toUpperCase() || game.type.toUpperCase();
-    game.tags = [];
+  for (const rawgame of rawgames as RawGameData[]) {
+    // // Basic setup
+    rawgame.category =
+      rawgame.gamebank.toUpperCase() || rawgame.type.toUpperCase();
+    // game.tags = [];
 
-    // Array conversions
-    game.jpgIds = game.jpgId ? [game.jpgId] : [];
+    // // Array conversions
+    rawgame.jpgIds = rawgame.jpgId ? [rawgame.jpgId] : [];
     // bids should be converted to array of strings
-    (game as any).bids = game.bids ? [game.bids] : [];
+    (rawgame as any).bids = rawgame.bids ? [rawgame.bids] : [];
 
     // Integer conversions - remove decimals and convert to integers
-    game.totalWagered = Math.floor(parseFloat(String(game.statIn || "0"))) || 0;
-    game.totalWon = Math.floor(parseFloat(String(game.statOut || "0"))) || 0;
-    game.targetRtp = Math.floor(parseFloat(game.standard_rtp || "90")) || 90;
-    game.statIn = Math.floor(parseFloat(String(game.statIn || "0"))) || 0;
-    game.statOut = Math.floor(parseFloat(String(game.statOut || "0"))) || 0;
-    game.rtpStatIn = Math.floor(parseFloat(String(game.rtpStatIn || "0"))) || 0;
-    game.rtpStatOut =
-      Math.floor(parseFloat(String(game.rtpStatOut || "0"))) || 0;
+    rawgame.totalWagered =
+      Math.floor(parseFloat(String(rawgame.statIn || "0"))) || 0;
+    rawgame.totalWon =
+      Math.floor(parseFloat(String(rawgame.statOut || "0"))) || 0;
+    rawgame.targetRtp =
+      Math.floor(parseFloat(rawgame.standard_rtp || "90")) || 90;
+    rawgame.statIn = Math.floor(parseFloat(String(rawgame.statIn || "0"))) || 0;
+    rawgame.statOut =
+      Math.floor(parseFloat(String(rawgame.statOut || "0"))) || 0;
+    rawgame.rtpStatIn =
+      Math.floor(parseFloat(String(rawgame.rtpStatIn || "0"))) || 0;
+    rawgame.rtpStatOut =
+      Math.floor(parseFloat(String(rawgame.rtpStatOut || "0"))) || 0;
 
     // Boolean conversions
-    game.isActive = game.active === "true";
-    game.isFeatured = game.featured === "true";
+    rawgame.isActive = rawgame.active === "true";
+    rawgame.isFeatured = rawgame.featured === "true";
 
     // Field conversions with proper radix and type handling
-    game.status = game.device ? parseInt(String(game.device), 10) || 0 : 0;
-    game.device = game.device ? parseInt(String(game.device), 10) || 0 : 0;
-    // currentRtp doesn't exist in interface, removing this assignment
+    rawgame.status = rawgame.device
+      ? parseInt(String(rawgame.device), 10) || 0
+      : 0;
+    rawgame.device = rawgame.device
+      ? parseInt(String(rawgame.device), 10) || 0
+      : 0;
+    // // currentRtp doesn't exist in interface, removing this assignment
 
-    // Clean up old fields - only delete if they exist
-    if (game.jpgId !== undefined) delete (game as any).jpgId;
-    if (game.statIn !== undefined) delete (game as any).statIn;
-    if (game.statOut !== undefined) delete (game as any).statOut;
-    if (game.active !== undefined) delete (game as any).active;
-    if (game.featured !== undefined) delete (game as any).featured;
-    if (game.standard_rtp !== undefined) delete (game as any).standard_rtp;
-    if (game.current_rtp !== undefined) delete (game as any).current_rtp;
-
+    // // Clean up old fields - only delete if they exist
+    if (rawgame.jpgId !== undefined) delete (rawgame as any).jpgId;
+    if (rawgame.statIn !== undefined) delete (rawgame as any).statIn;
+    if (rawgame.statOut !== undefined) delete (rawgame as any).statOut;
+    if (rawgame.active !== undefined) delete (rawgame as any).active;
+    if (rawgame.featured !== undefined) delete (rawgame as any).featured;
+    if (rawgame.standard_rtp !== undefined)
+      delete (rawgame as any).standard_rtp;
+    if (rawgame.current_rtp !== undefined) delete (rawgame as any).current_rtp;
+    if (rawgame.id !== undefined) delete (rawgame as any).id;
+    if (rawgame.type !== undefined) delete (rawgame as any).type;
+    let goldsvetData = {};
+    if (rawgame.lines_percent_config_spin !== "1") {
+      goldsvetData = rawgame;
+    }
+    const game = {
+      name: rawgame.name,
+      title: rawgame.title,
+      description: "",
+      category: rawgame.category,
+      thumbnailUrl: "",
+      bannerUrl: "",
+      developer: rawgame.developer,
+      operatorId: "house",
+      targetRtp: "85",
+      status: "ACTIVE",
+      minBet: 20,
+      maxBet: 1000,
+      isFeatured: false,
+      jackpotGroup: "",
+      goldsvetData,
+    };
     GAMES.push(game);
   }
 
@@ -124,6 +158,8 @@ export async function seedGames() {
     ...game,
     jpgIds: [],
     category: game.category.toUpperCase(),
+    status: "ACTIVE",
+    id: createId(),
     // categoryId: rand(createdCategories).id,
   }));
 
@@ -161,8 +197,7 @@ export async function seedGames() {
   );
   console.log("Type of bids:", typeof gamesToInsert[0].bids);
   console.log("Type of jpgIds:", typeof gamesToInsert[0].jpgIds);
-  console.log(gamesToInsert);
-  // await db.insert(schema.games).values(gamesToInsert).onConflictDoNothing();
+  await db.insert(schema.games).values(gamesToInsert).onConflictDoNothing();
 
   console.log("✅ Games and categories seeded.");
 }

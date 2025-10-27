@@ -1,9 +1,13 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
+import {
+  checkBalance,
+  createBalanceForNewUser,
+  getDetailedBalance,
+} from '@/features/gameplay/balance-management.service';
+import db from '@/database';
+import { players, gameSessions, games, playerBalances } from '@/database/schema';
 import { and, eq, gte, sql } from 'drizzle-orm';
-import { checkWalletBalance, getUserWallets } from '../wallet.service';
-import db from '../src/database';
-import { players, gameSessions, games, session } from '../src/database/schema';
 
 /**
  * Bet validation service for comprehensive pre-bet checks
@@ -43,34 +47,34 @@ export async function validateBet(request: BetValidationRequest): Promise<BetVal
     if (!sessionValidation.valid) {
       return sessionValidation;
     }
-    console.log(`sessionValidation : ${sessionValidation.valid}`);
+    // console.log(`sessionValidation : ${sessionValidation.valid}`);
     // 2. Validate game session and eligibility
     const gameValidation = await validateGameSession(request);
     if (!gameValidation.valid) {
       return gameValidation;
     }
-    console.log(`gameValidation : ${gameValidation.valid}`);
+    // console.log(`gameValidation : ${gameValidation.valid}`);
 
     // 3. Validate game availability and limits
     const gameLimitsValidation = await validateGameLimits(request);
     if (!gameLimitsValidation.valid) {
       return gameLimitsValidation;
     }
-    console.log(`gameLimitsValidation : ${gameLimitsValidation.valid}`);
+    // console.log(`gameLimitsValidation : ${gameLimitsValidation.valid}`);
 
     // 4. Validate wager amount limits
     const wagerValidation = await validateWagerAmount(request);
     if (!wagerValidation.valid) {
       return wagerValidation;
     }
-    console.log(`wagerValidation : ${wagerValidation.valid}`);
+    // console.log(`wagerValidation : ${wagerValidation.valid}`);
 
     // 5. Validate balance sufficiency
     const balanceValidation = await validateBalance(request);
     if (!balanceValidation.valid) {
       return balanceValidation;
     }
-    console.log(`balanceValidation : ${balanceValidation.valid}`);
+    // console.log(`balanceValidation : ${balanceValidation.valid}`);
     console.log('All validations passed');
 
     // All validations passed
@@ -97,11 +101,11 @@ async function validateUserSession(userId: string): Promise<BetValidationResult>
   const user = await db.query.players.findFirst({
     where: eq(players.id, userId),
     with: {
-      wallets: {
-        with: {
-          balances: true,
-        },
-      },
+      // wallets: {
+      //   with: {
+      //     balances: true,
+      //   },
+      // },
     },
   });
 
@@ -113,8 +117,8 @@ async function validateUserSession(userId: string): Promise<BetValidationResult>
   // For now, assuming all users are active if they exist
 
   // Check for active auth session
-  console.log('Available sessions columns:', Object.keys(gameSessions));
-  console.log('Checking for active auth session for userId:', userId);
+  // console.log("Available sessions columns:", Object.keys(gameSessions));
+  // console.log("Checking for active auth session for userId:", userId);
   let session;
   if (process.env.NODE_ENV === 'development') {
     session = await db.query.gameSessions.findFirst({
@@ -148,7 +152,7 @@ async function validateGameSession(request: BetValidationRequest): Promise<BetVa
   const game = await db.query.games.findFirst({
     where: and(
       eq(games.id, request.gameId),
-      gte(games.status, 0), // 0 = ACTIVE (confirmed by user)
+      eq(games.status, 'ACTIVE'), // 0 = ACTIVE (confirmed by user)
       // eq(games.state, true),
     ),
   });
@@ -156,7 +160,7 @@ async function validateGameSession(request: BetValidationRequest): Promise<BetVa
   if (!game) {
     return { valid: false, reason: 'Game not found or inactive' };
   }
-
+  console.log('request.gameId: ', request.gameId);
   const gameSession = await db.query.gameSessions.findFirst({
     where: and(
       eq(gameSessions.playerId, request.userId),
@@ -223,11 +227,13 @@ async function validateWagerAmount(request: BetValidationRequest): Promise<BetVa
   //     activeWallet: true
   //   },
   // })
-  const userWallets = await getUserWallets(request.userId);
-  const user = userWallets[0];
+  let userBalance = await getDetailedBalance(request.userId);
+  // const user = userWallets[0];
 
-  if (!user) {
-    return { valid: false, reason: 'User wallet not found' };
+  if (!userBalance) {
+    // return { valid: false, reason: "Player balance not found" };
+    await db.insert(playerBalances).values({ playerId: request.userId });
+    userBalance = await getDetailedBalance(request.userId);
   }
 
   // Check daily loss limit (configurable per user/VIP level)
@@ -323,17 +329,21 @@ async function validateBalance(request: BetValidationRequest): Promise<BetValida
   //         balances: true,
   //     },
   // })
-  const userWallets = await getUserWallets(request.userId);
-  const user = userWallets[0];
+  // const playerBalance = await getDetailedBalance(request.userId);
+  const playerBalance = db
+    .select()
+    .from(playerBalances)
+    .where(eq(playerBalances.playerId, request.userId));
 
-  if (!user) {
-    return { valid: false, reason: 'User wallet not found' };
+  if (!playerBalance) {
+    // return { valid: false, reason: "User wallet not found" };
+    await createBalanceForNewUser(request.userId);
   }
 
-  const walletBalance = user;
+  // const walletBalance = user;
 
   // Check balance using wallet service
-  const balanceCheck = await checkWalletBalance(walletBalance.walletId, request.wagerAmount);
+  const balanceCheck = await checkBalance(request.userId, request.wagerAmount);
 
   if (!balanceCheck.sufficient) {
     return {
@@ -372,9 +382,9 @@ export async function quickValidateBet(
 /**
  * Get game-specific configuration and limits
  */
-export async function getGameLimits(gameId: string): Promise<GameLimits | null> {
+export async function getGameLimits(gameName: string): Promise<GameLimits | null> {
   const game = await db.query.games.findFirst({
-    where: eq(games.id, gameId),
+    where: eq(games.name, gameName),
   });
 
   if (!game) {

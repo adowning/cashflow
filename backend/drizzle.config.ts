@@ -1,11 +1,12 @@
-import { defineConfig } from 'drizzle-kit';
+import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  schema: './database/schema',
-  out: '../drizzle',
-  dialect: 'postgresql',
+  schema: "./database/schema",
+  out: "../drizzle",
+  dialect: "postgresql",
   dbCredentials: {
-    url: 'postgresql://user:asdfasdf@localhost:5439/newdb',
+    // url: "postgresql://user:asdfasdf@localhost:5439/newdb",
+    url: "postgresql://postgres.crqbazcsrncvbnapuxcp:crqbazcsrncvbnapuxcp@aws-1-us-east-1.pooler.supabase.com:6543/postgres",
   },
 });
 // import 'dotenv/config';

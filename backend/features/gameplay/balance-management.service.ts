@@ -1,16 +1,48 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql, sum } from 'drizzle-orm';
 import db from '@@/database/index.js';
-import { playerBonuses, bonuses } from '@@/database/schema';
-import { playerBalances } from '@@/database/schema/gameplay.schema.js';
+import { playerBonuses, bonuses, type Settings } from '@@/database/schema';
+import {
+  playerBalances,
+  TPlayerBalancess,
+  type TPlayerBalances,
+} from '@@/database/schema/gameplay.schema.js';
+import { configurationManager } from '@/config/config';
+import { z } from 'zod';
 
+const PositiveInt = z.number().int().positive('Amount must be a positive integer (cents).');
+const NonNegativeInt = z.number().int().min(0, 'Amount must be a non-negative integer (cents).');
 /**
  * Balance management system for real vs bonus balance handling
- * Implements FIFO logic for multiple bonuses and wagering progress tracking
+ *
  */
+export const BetSchema = z.object({
+  playerId: z.string().min(1),
+  betAmount: NonNegativeInt, // 0 for a free spin
+  isFreeSpin: z.boolean().default(false),
+});
+export type BetInput = z.infer<typeof BetSchema>;
+
+export const WinSchema = z.object({
+  playerId: z.string().min(1),
+  winAmount: NonNegativeInt, // 0 for a losing spin
+  isFreeSpinWin: z.boolean().default(false),
+});
+export type WinInput = z.infer<typeof WinSchema>;
+export const DepositSchema = z.object({
+  playerId: z.string().min(1),
+  amount: PositiveInt, // in cents
+});
+export type DepositInput = z.infer<typeof DepositSchema>;
+
+export const WithdrawSchema = z.object({
+  playerId: z.string().min(1),
+  amount: PositiveInt, // in cents
+});
+export type WithdrawInput = z.infer<typeof WithdrawSchema>;
 
 export interface BonusInfo {
   id: string;
-  amount: number;
+  awardedAmount: number;
   wageringRequirement: number;
   wageredAmount: number;
   remainingAmount: number;
@@ -74,8 +106,27 @@ export interface PlayerBalance {
 }
 
 /**
- * Deduct from bonus balance using FIFO logic
+ * Applies wagering to all active requirements and checks for bonus conversion.
+ * This is a core private method.
  */
+function _applyWagering(balance: TPlayerBalances, wagerAmount: number): TPlayerBalances {
+  // 1. Reduce all active wagering requirements
+  balance.depositWRRemaining = Math.max(0, balance.depositWRRemaining - wagerAmount);
+  balance.bonusWRRemaining = Math.max(0, balance.bonusWRRemaining - wagerAmount);
+
+  // 2. Check for Bonus Conversion
+  // If bonus WR is now 0 and there is a bonus balance, convert it to real money.
+  if (balance.bonusWRRemaining === 0 && balance.bonusBalance > 0) {
+    console.log(
+      `[WageringManager] CONVERSION: Player ${balance.playerId} converted ${balance.bonusBalance} bonus to real.`,
+    );
+    balance.realBalance += balance.bonusBalance;
+    balance.bonusBalance = 0;
+  }
+
+  return balance;
+}
+
 async function deductFromBonusBalance(
   tx: any,
   playerId: string,
@@ -86,9 +137,9 @@ async function deductFromBonusBalance(
   wageringProgress: BalanceDeductionResult['wageringProgress'];
   error?: string;
 }> {
-  // Get active bonuses ordered by creation date (FIFO)
+  // Get active bonuses ordered by creation date
   const activeBonuses = await tx.query.playerBonuses.findMany({
-    where: and(eq(playerBonuses.playerId, playerId), eq(playerBonuses.status, 'pending')),
+    where: and(eq(playerBonuses.playerId, playerId), eq(playerBonuses.status, 'PENDING')),
     with: {
       bonus: true,
     },
@@ -164,10 +215,44 @@ async function deductFromBonusBalance(
     wageringProgress,
   };
 }
+async function getActiveBonusTotals(playerIdToFind: string) {
+  // This query groups all matching records into one result row
+  // and calculates the sum for each specified column.
+  const totals = await db
+    .select({
+      totalAwarded: sum(playerBonuses.awardedAmount),
+      totalWageringRequired: sum(playerBonuses.wageringRequired),
+      totalWageringProgress: sum(playerBonuses.wageringProgress),
+    })
+    .from(playerBonuses)
+    .where(and(eq(playerBonuses.playerId, playerIdToFind), eq(playerBonuses.status, 'ACTIVE')));
 
-/**
- * Deduct from bonus balance using FIFO logic
- */
+  // The result is an array with one object, e.g.:
+  // [{
+  //   totalAwarded: '50000',
+  //   totalWageringRequired: '1500000',
+  //   totalWageringProgress: '25000'
+  // }]
+  const result = totals[0];
+
+  if (!result || result.totalAwarded === null) {
+    console.log('No active bonuses found for this player.');
+    return {
+      totalAwarded: 0,
+      totalWageringRequired: 0,
+      totalWageringProgress: 0,
+    };
+  }
+  if (result.totalWageringProgress == null) result.totalWageringProgress = '0';
+  if (result.totalWageringRequired == null) result.totalWageringRequired = '0';
+  // IMPORTANT: sum() returns a string. You must parse it.
+  return {
+    totalAwarded: parseInt(result.totalAwarded, 10),
+    totalWageringRequired: parseInt(result.totalWageringRequired, 10),
+    totalWageringProgress: parseInt(result.totalWageringProgress, 10),
+  };
+}
+
 export async function deductBetAmount(
   request: BalanceDeductionRequest,
 ): Promise<BalanceDeductionResult> {
@@ -231,7 +316,7 @@ export async function deductBetAmount(
           .where(eq(playerBalances.playerId, request.playerId));
       }
 
-      // Deduct from bonus balance(s) if needed (FIFO logic)
+      // Deduct from bonus balance(s) if needed
       if (amountToDeductFromBonus > 0) {
         const bonusDeductionResult = await deductFromBonusBalance(
           tx,
@@ -306,6 +391,7 @@ export async function addWinnings(
       request.playerId,
       request.amount,
       request.balanceType,
+      'bet',
     );
 
     return creditResult;
@@ -319,12 +405,34 @@ export async function addWinnings(
   }
 }
 
+export async function handleDeposit(input: DepositInput): Promise<TPlayerBalances> {
+  const settings = configurationManager.getConfiguration();
+
+  const { playerId, amount } = DepositSchema.parse(input);
+  const balance = await getOrCreateBalance(playerId);
+
+  const depositWROwed = amount * settings.depositWRMultiplier;
+
+  const updatedBalances = await db
+    .update(playerBalances)
+    .set({
+      realBalance: balance.realBalance + amount,
+      totalDeposited: balance.totalDeposited + amount,
+      depositWRRemaining: balance.depositWRRemaining + depositWROwed,
+      updatedAt: new Date(),
+    })
+    .where(eq(TPlayerBalancess.playerId, playerId))
+    .returning();
+
+  return updatedBalances[0];
+}
+
 /**
  * Get detailed balance information including active bonuses
  */
 export async function getDetailedBalance(userId: string): Promise<{
   realBalance: number;
-  totalBonusBalance: number;
+  bonusBalance: number;
   activeBonuses: BonusInfo[];
   totalBalance: number;
 } | null> {
@@ -338,33 +446,54 @@ export async function getDetailedBalance(userId: string): Promise<{
 
   // Get active bonuses with details
   const activeBonuses = await db.query.playerBonuses.findMany({
-    where: and(eq(playerBonuses.playerId, userId), eq(playerBonuses.status, 'pending')),
-    with: {
-      bonus: {
-        columns: {
-          expireDate: true,
-          slot: true,
-        },
-      },
-    },
+    where: and(eq(playerBonuses.playerId, userId), eq(playerBonuses.status, 'PENDING')),
+    // with: {
+    //   bonus: {
+    //     columns: {
+    //       expiryDays: true,
+    //       slot: true,
+    //     },
+    //   },
+    // },
     orderBy: [asc(playerBonuses.createdAt)],
   });
+
   const bonusDetails: BonusInfo[] = activeBonuses.map((pb) => ({
     id: pb.id,
-    amount: Number(pb.amount),
-    wageringRequirement: Number(pb.goalAmount) / Number(pb.amount), // Calculate multiplier
-    wageredAmount: Number(pb.processAmount),
-    remainingAmount: Number(pb.amount),
-    expiryDate: (pb.bonus as any)?.expireDate ? new Date((pb.bonus as any).expireDate) : undefined,
+    awardedAmount: Number(pb.awardedAmount),
+    wageringRequirement: Number(pb.wageringRequired), /// Number(pb.amount), // Calculate multiplier
+    wageredAmount: Number(pb.wageringProgress),
+    remainingAmount: Number(pb.wageringRequired - pb.wageringProgress),
+    expiryDate: pb.expiresAt || undefined, //(pb.expiresAt)?.expiresAt
+    // ? new Date((pb.expiresAt as any).expireDate)
+    // : undefined,
     gameRestrictions: [], // Should be populated from bonus configuration
   }));
 
   return {
     realBalance: Number(playerBalance.realBalance),
-    totalBonusBalance: Number(playerBalance.bonusBalance),
+    bonusBalance: Number(playerBalance.bonusBalance),
     activeBonuses: bonusDetails,
     totalBalance: Number(playerBalance.realBalance) + Number(playerBalance.bonusBalance),
   };
+}
+
+export async function getOrCreateBalance(playerId: string): Promise<TPlayerBalances> {
+  const balances = await db
+    .select()
+    .from(TPlayerBalancess)
+    .where(eq(TPlayerBalancess.playerId, playerId))
+    .limit(1);
+
+  if (balances.length > 0) {
+    return balances[0];
+  }
+
+  // Create a new balance
+  const newBalance = { playerId };
+  const insertedBalances = await db.insert(TPlayerBalancess).values(newBalance).returning();
+
+  return insertedBalances[0];
 }
 
 /**
@@ -403,7 +532,7 @@ export async function getWageringProgress(playerId: string): Promise<{
   }>;
 }> {
   const activeBonuses = await db.query.playerBonuses.findMany({
-    where: and(eq(playerBonuses.playerId, playerId), eq(playerBonuses.status, 'pending')),
+    where: and(eq(playerBonuses.playerId, playerId), eq(playerBonuses.status, 'PENDING')),
     with: {
       bonus: true, // Add this to load the bonus relation
     },
@@ -413,8 +542,8 @@ export async function getWageringProgress(playerId: string): Promise<{
   let totalWagered = 0;
 
   const bonusProgress = activeBonuses.map((pb) => {
-    const required = Number(pb.goalAmount);
-    const wagered = Number(pb.processAmount);
+    const required = Number(pb.wageringRequired);
+    const wagered = Number(pb.wageringProgress);
     const progress = required > 0 ? wagered / required : 0;
     const completed = wagered >= required;
 
@@ -442,6 +571,42 @@ export async function getWageringProgress(playerId: string): Promise<{
  * Create a balance record for a new user
  */
 export async function createBalanceForNewUser(playerId: string): Promise<void> {
+  //   player_id
+  // // text
+
+  // real_balance
+  // integer
+
+  // bonus_balance
+  // integer
+
+  // free_spins_remaining
+  // integer
+
+  // deposit_wr_remaining
+  // integer
+
+  // bonus_wr_remaining
+  // integer
+
+  // total_deposited
+  // integer
+
+  // total_withdrawn
+  // integer
+
+  // total_wagered
+  // integer
+
+  // total_won
+  // integer
+
+  // total_bonus_granted
+  // integer
+
+  // total_free_spin_wins
+  // integer
+
   await db.insert(playerBalances).values({
     playerId: playerId,
   });
@@ -454,28 +619,45 @@ export async function createBalanceForNewUser(playerId: string): Promise<void> {
 export async function checkBalance(
   playerId: string,
   betAmount: number,
-): Promise<{ sufficient: boolean; balanceType: 'real' | 'bonus'; availableAmount: number }> {
-  const playerBalance = await getBalance(playerId);
+): Promise<{
+  sufficient: boolean;
+  balanceType: 'real' | 'bonus';
+  availableAmount: number;
+}> {
+  const playerBalance = await getOrCreateBalance(playerId);
 
   if (!playerBalance) {
     return { sufficient: false, balanceType: 'real', availableAmount: 0 };
   }
 
   // Check real balance first (preferred)
-  if (playerBalance.realBalance >= betAmount) {
-    return { sufficient: true, balanceType: 'real', availableAmount: playerBalance.realBalance };
+  console.log(
+    'playerBalance.realBalance + playerBalance.bonusBalance: ',
+    playerBalance.realBalance + playerBalance.bonusBalance,
+  );
+  console.log('betAmount: ', betAmount);
+  if (playerBalance.realBalance + playerBalance.bonusBalance >= betAmount) {
+    return {
+      sufficient: true,
+      balanceType: 'real',
+      availableAmount: playerBalance.realBalance + playerBalance.bonusBalance,
+    };
   }
 
   // Check bonus balance as fallback
-  if (playerBalance.bonusBalance >= betAmount) {
-    return { sufficient: true, balanceType: 'bonus', availableAmount: playerBalance.bonusBalance };
-  }
+  // if (playerBalance.bonusBalance >= betAmount) {
+  //   return {
+  //     sufficient: true,
+  //     balanceType: "bonus",
+  //     availableAmount: playerBalance.bonusBalance,
+  //   };
+  // }
 
   // Insufficient total balance
   return {
     sufficient: false,
     balanceType: 'real', // Default to real when insufficient
-    availableAmount: playerBalance.totalBalance,
+    availableAmount: playerBalance.realBalance + playerBalance.bonusBalance,
   };
 }
 
@@ -483,7 +665,7 @@ export async function checkBalance(
  * Debit from player balance atomically
  * Uses database transactions for consistency
  */
-export async function debitFromBalance(
+async function debitFromBalance(
   playerId: string,
   amount: number,
   balanceType: 'real' | 'bonus',
@@ -542,12 +724,15 @@ export async function debitFromBalance(
 /**
  * Credit to player balance atomically
  */
-export async function creditToBalance(
+async function creditToBalance(
   playerId: string,
   amount: number,
   balanceType: 'real' | 'bonus',
+  creditToBalanceType: 'deposit' | 'bet',
 ): Promise<{ success: boolean; newBalance: number; error?: string }> {
   try {
+    const settings = configurationManager.getConfiguration();
+
     // Get current balance outside transaction (better performance and typing)
     const currentBalance = await db.query.playerBalances.findFirst({
       where: eq(playerBalances.playerId, playerId),
@@ -561,20 +746,34 @@ export async function creditToBalance(
     const result = await db.transaction(async (tx) => {
       let newBalance: number;
       let updateField: any;
-
+      let wrOwed: number;
       if (balanceType === 'real') {
-        newBalance = Number(currentBalance.realBalance) + amount;
-        updateField = { realBalance: newBalance };
+        newBalance = Math.floor(Math.floor(Number(currentBalance.realBalance) + amount));
+        wrOwed = Math.floor(Number(currentBalance.depositWRRemaining) + amount);
+        updateField = { realBalance: newBalance, depositWRRemaining: wrOwed };
       } else {
-        newBalance = Number(currentBalance.bonusBalance) + amount;
-        updateField = { bonusBalance: newBalance };
+        newBalance = Math.floor(Number(currentBalance.bonusBalance) + amount);
+        wrOwed = Math.floor(
+          Number(currentBalance.bonusWRRemaining) +
+            amount * settings.wageringConfig.defaultWageringMultiplier,
+        );
+        updateField = { bonusBalance: newBalance, bonusWRRemaining: wrOwed };
       }
-
+      console.log('total_wagered', Number(playerBalances.totalWagered));
+      if (creditToBalanceType == 'deposit') {
+        const totalDeposited = Math.floor(Number(playerBalances.totalDeposited) + amount);
+        updateField.totalDeposited = totalDeposited;
+      }
+      if (creditToBalanceType == 'bet') {
+        const totalWagered = Math.floor(Number(playerBalances.totalWagered) + amount);
+        updateField.totalWagered = totalWagered;
+      }
       // Update balance atomically
       await tx
         .update(playerBalances)
         .set({
           ...updateField,
+
           updatedAt: new Date(),
         })
         .where(eq(playerBalances.playerId, playerId));
@@ -596,19 +795,27 @@ export async function creditToBalance(
 /**
  * Get all balances for a user across different operators
  */
-export async function getBalance(userId: string): Promise<PlayerBalance | undefined> {
-  const userBalance = await db.query.playerBalances.findFirst({
-    where: eq(playerBalances.playerId, userId),
-  });
+// export async function getOrCreateBalance(playerId: string): Promise<PlayerBalance> {
+//   let userBalance;
+//   userBalance = await db.query.playerBalances.findFirst({
+//     where: eq(playerBalances.playerId, playerId),
+//   });
 
-  if (!userBalance) {
-    return undefined;
-  }
-
-  return {
-    playerId: userBalance.playerId,
-    realBalance: Number(userBalance.realBalance),
-    bonusBalance: Number(userBalance.bonusBalance),
-    totalBalance: Number(userBalance.realBalance) + Number(userBalance.bonusBalance),
-  };
-}
+//   if (!userBalance) {
+//     const _userBalance = await db
+//       .insert(playerBalances)
+//       .values({
+//         playerId,
+//       })
+//       .returning();
+//     if (_userBalance != undefined) userBalance = _userBalance;
+//   }
+//   return userBalance;
+//   // return {
+//   //   playerId: userBalance.playerId,
+//   //   realBalance: Number(userBalance.realBalance),
+//   //   bonusBalance: Number(userBalance.bonusBalance),
+//   //   totalBalance:
+//   //     Number(userBalance.realBalance) + Number(userBalance.bonusBalance),
+//   // };
+// }

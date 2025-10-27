@@ -1,13 +1,13 @@
-import { betterAuth } from 'better-auth';
-import { type DB, drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { username, customSession } from 'better-auth/plugins';
-import { logger } from '@/lib/utils/logger';
-import { createInsertSchema } from 'drizzle-zod';
-import { players, balances } from '../database/schema';
-import db from '../database';
-import { usersRoles, roles } from '../database/schema/auth.schema';
-import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { betterAuth } from "better-auth";
+import { type DB, drizzleAdapter } from "better-auth/adapters/drizzle";
+import { username, customSession } from "better-auth/plugins";
+import { logger } from "@/lib/utils/logger";
+import { createInsertSchema } from "drizzle-zod";
+import { players, balances } from "../database/schema";
+import db from "../database";
+import { usersRoles, roles } from "../database/schema/auth.schema";
+import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 const playerInsertSchema = createInsertSchema(players);
 
@@ -23,14 +23,14 @@ const getUserRoles = async (userId: string) => {
     });
     return rolesResult.map((ur) => ur.role.name);
   } catch (error: unknown) {
-    console.error('Error fetching user roles:', error);
+    console.error("Error fetching user roles:", error);
     return [];
   }
 };
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: 'pg',
+    provider: "pg",
     usePlural: true,
   }),
   logger: {
@@ -40,7 +40,7 @@ export const auth = betterAuth({
     },
   },
   session: {
-    modelName: 'authSession',
+    modelName: "authSession",
   },
   databaseHooks: {
     user: {
@@ -60,7 +60,9 @@ export const auth = betterAuth({
               playername,
               id: user.id,
               userId: user.id,
-              avatarUrl: 'https://gameui.cashflowcasino.com/public/avatars/avatar-01.webp',
+              referralCode: user.name === "adminuser" ? "adminuser-code-1" : "",
+              avatarUrl:
+                "https://gameui.cashflowcasino.com/public/avatars/avatar-01.webp",
             };
 
             const parsedPlayer = playerInsertSchema.parse(player);
@@ -73,7 +75,7 @@ export const auth = betterAuth({
 
             // Query roles table for 'user' role ID
             const userRole = await db.query.roles.findFirst({
-              where: eq(roles.name, 'user'),
+              where: eq(roles.name, "user"),
             });
 
             if (userRole) {
@@ -83,10 +85,13 @@ export const auth = betterAuth({
                 roleId: userRole.id,
               });
             } else {
-              logger.error('User role not found in database');
+              logger.error("User role not found in database");
             }
           } catch (error) {
-            logger.error('Error creating player, balance, or role for user:', error.toString());
+            logger.error(
+              "Error creating player, balance, or role for user:",
+              error.toString()
+            );
           }
         },
       },
@@ -122,7 +127,7 @@ export const auth = betterAuth({
     customSession(async ({ user, session }) => {
       const roles = await getUserRoles(user.id);
       return {
-        roles: roles && roles.length > 0 ? roles : ['user'],
+        roles: roles && roles.length > 0 ? roles : ["user"],
         user,
         session,
       };

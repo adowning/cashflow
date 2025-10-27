@@ -1,0 +1,563 @@
+[
+  {
+    "id": "default-config",
+    "name": "Default System Configuration",
+    "referralCodeCount": 20,
+    "referralCommissionRate": 0.25,
+    "rates": "[{\"USD\": 1}]",
+    "commission": {
+      "master": 30,
+      "affiliate": 20,
+      "subAffiliate": 10
+    },
+    "jackpotConfig": {
+      "minor": {
+        "rate": 0.02,
+        "seedAmount": 100000,
+        "maxAmount": 1000000
+      },
+      "major": {
+        "rate": 0.01,
+        "seedAmount": 1000000,
+        "maxAmount": 10000000
+      },
+      "mega": {
+        "rate": 0.005,
+        "seedAmount": 10000000,
+        "maxAmount": 100000000
+      }
+    },
+    "vipConfig": {
+      "pointsPerDollar": 1,
+      "levelMultipliers": {
+        "1": 1.0,
+        "2": 1.2,
+        "3": 1.5,
+        "4": 2.0,
+        "5": 2.5
+      },
+      "costSharingPercentage": 20,
+      "vipLevels": [
+        {
+          "id": "oglongb4tsuzhogk4mcgp",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze I",
+          "xp": 5000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1
+        },
+        {
+          "id": "v1b41l9uhawwoqewq5vsh",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze II",
+          "xp": 10000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.1
+        },
+        {
+          "id": "mkqncqnx09b91e7ch8y47",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze III",
+          "xp": 18000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.2
+        },
+        {
+          "id": "1uzys1w81k35mu5x1w5jb",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze IV",
+          "xp": 28000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.3
+        },
+        {
+          "id": "cm89hzhwmyv6gzfcenxy1",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze V",
+          "xp": 40000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.4
+        },
+        {
+          "id": "9u22yeggrjiwzwau3xmgv",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze VI",
+          "xp": 55000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.5
+        },
+        {
+          "id": "6c12dxf0nvqrozvbaz7ud",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze VII",
+          "xp": 75000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.6
+        },
+        {
+          "id": "7xote1npswr4cpyyn9nkt",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze VIII",
+          "xp": 100000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.7
+        },
+        {
+          "id": "h36xci2bq5q4sp61rzzzn",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze IX",
+          "xp": 130000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.8
+        },
+        {
+          "id": "0hwslo0v2n6wvbqzuyl0o",
+          "parent_id": "bronze-tier",
+          "level_name": "Bronze X",
+          "xp": 170000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 1.9
+        },
+        {
+          "id": "3vy4xwrn5f9sqkkc51hi0",
+          "parent_id": "silver-tier",
+          "level_name": "Silver I",
+          "xp": 200000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2
+        },
+        {
+          "id": "owoeq0njyptare5ngaklb",
+          "parent_id": "silver-tier",
+          "level_name": "Silver II",
+          "xp": 250000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.1
+        },
+        {
+          "id": "prmtitt9p3wrxp5s99bah",
+          "parent_id": "silver-tier",
+          "level_name": "Silver III",
+          "xp": 310000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.2
+        },
+        {
+          "id": "dnfdi5emhhpge89i3avbn",
+          "parent_id": "silver-tier",
+          "level_name": "Silver IV",
+          "xp": 380000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.3
+        },
+        {
+          "id": "l7568hxz6e8p4end3d5de",
+          "parent_id": "silver-tier",
+          "level_name": "Silver V",
+          "xp": 460000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.4
+        },
+        {
+          "id": "ccnw8jcptbkjag2t7s22p",
+          "parent_id": "silver-tier",
+          "level_name": "Silver VI",
+          "xp": 550000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.5
+        },
+        {
+          "id": "tpm5lyzbod7b2tv094sza",
+          "parent_id": "silver-tier",
+          "level_name": "Silver VII",
+          "xp": 650000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.6
+        },
+        {
+          "id": "crwrqotf8utd3gurlimz7",
+          "parent_id": "silver-tier",
+          "level_name": "Silver VIII",
+          "xp": 760000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.7
+        },
+        {
+          "id": "fpzxjfsickple0kdxozg1",
+          "parent_id": "silver-tier",
+          "level_name": "Silver IX",
+          "xp": 880000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.8
+        },
+        {
+          "id": "hwmj7py0ndwpwr9nau7yp",
+          "parent_id": "silver-tier",
+          "level_name": "Silver X",
+          "xp": 1000000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 2.9
+        },
+        {
+          "id": "kgak1hptdstxypubmbjnh",
+          "parent_id": "gold-tier",
+          "level_name": "Gold I",
+          "xp": 1100000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3
+        },
+        {
+          "id": "9dj7y93nb0ejzztfnv9in",
+          "parent_id": "gold-tier",
+          "level_name": "Gold II",
+          "xp": 1300000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.1
+        },
+        {
+          "id": "f66y5iwh4qd1q21lhwphu",
+          "parent_id": "gold-tier",
+          "level_name": "Gold III",
+          "xp": 1520000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.2
+        },
+        {
+          "id": "qbm6lgmjwunw43yps23qb",
+          "parent_id": "gold-tier",
+          "level_name": "Gold IV",
+          "xp": 1770000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.3
+        },
+        {
+          "id": "qlsfpo10xh32os65qs794",
+          "parent_id": "gold-tier",
+          "level_name": "Gold V",
+          "xp": 2050000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.4
+        },
+        {
+          "id": "wgsfm48mmd6h4rahrzndl",
+          "parent_id": "gold-tier",
+          "level_name": "Gold VI",
+          "xp": 2370000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.5
+        },
+        {
+          "id": "smp2gaj1yoskvvmb0r8ce",
+          "parent_id": "gold-tier",
+          "level_name": "Gold VII",
+          "xp": 2730000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.6
+        },
+        {
+          "id": "cueijmjoc390l7p2sky1u",
+          "parent_id": "gold-tier",
+          "level_name": "Gold VIII",
+          "xp": 3130000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.7
+        },
+        {
+          "id": "clhi3akomqftlsuzmka7t",
+          "parent_id": "gold-tier",
+          "level_name": "Gold IX",
+          "xp": 3570000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.8
+        },
+        {
+          "id": "m9tephndvcoutyo2q8wqh",
+          "parent_id": "gold-tier",
+          "level_name": "Gold X",
+          "xp": 4050000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 3.9
+        },
+        {
+          "id": "j2u7nt5sg6k6bpmguanbr",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum I",
+          "xp": 4200000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4
+        },
+        {
+          "id": "wvbhqbersfdxzolwkskcr",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum II",
+          "xp": 4700000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.1
+        },
+        {
+          "id": "clm5vx5guqscc8hbbnia2",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum III",
+          "xp": 5250000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.2
+        },
+        {
+          "id": "rw2biy3tj085m3ovmms7z",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum IV",
+          "xp": 5850000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.3
+        },
+        {
+          "id": "dwrbrego0a56bpgsufuan",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum V",
+          "xp": 6500000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.4
+        },
+        {
+          "id": "0hdna45v1la8m5p35vsti",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum VI",
+          "xp": 7200000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.5
+        },
+        {
+          "id": "1amvlpb5ee3eslu845e9t",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum VII",
+          "xp": 7950000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.6
+        },
+        {
+          "id": "lcrvtx0ek5u246zvfpzmb",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum VIII",
+          "xp": 8750000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.7
+        },
+        {
+          "id": "f2bytw0ln2b06ibkrkr42",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum IX",
+          "xp": 9600000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.8
+        },
+        {
+          "id": "6195xcq3nmn076m241jzk",
+          "parent_id": "platinum-tier",
+          "level_name": "Platinum X",
+          "xp": 10500000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 4.9
+        },
+        {
+          "id": "3s5j999evvvr4wrhz0pq8",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond I",
+          "xp": 11500000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5
+        },
+        {
+          "id": "jzap53la286zvbamelfen",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond II",
+          "xp": 13000000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.1
+        },
+        {
+          "id": "auh86eso8yfjae22eeiq0",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond III",
+          "xp": 14600000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.2
+        },
+        {
+          "id": "qip3x8v3d1jl5i05dm278",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond IV",
+          "xp": 16300000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.3
+        },
+        {
+          "id": "37x99zfmklvzllo0qnwvi",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond V",
+          "xp": 18100000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.4
+        },
+        {
+          "id": "s73efjnzrkaky27ztmasa",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond VI",
+          "xp": 20000000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.5
+        },
+        {
+          "id": "l27aqhz6uxbkwsqgj828g",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond VII",
+          "xp": 22000000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.6
+        },
+        {
+          "id": "so4ix3vzb7vvxfit9f81q",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond VIII",
+          "xp": 24100000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.7
+        },
+        {
+          "id": "9ms1wp831ob3i74ghpcj8",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond IX",
+          "xp": 26300000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.8
+        },
+        {
+          "id": "mgceoblax7w0bf2payrge",
+          "parent_id": "diamond-tier",
+          "level_name": "Diamond X",
+          "xp": 28600000,
+          "settingId": "2",
+          "dailyBonusMultiplier": 5.9
+        }
+      ],
+      "vipRanks": [
+        {
+          "id": 1,
+          "level": 1,
+          "name": "Bronze",
+          "icon": "/images/vip/bronze_rank.avif",
+          "depositExp": 1000,
+          "minXp": 5000,
+          "uprankAward": 100,
+          "weekAward": 10,
+          "hasConcierge": false,
+          "hasVipLoungeAccess": false,
+          "isInvitationOnly": false,
+          "xpForNext": 20000,
+          "dailyBonusCoinPct": 1,
+          "hourlyBonusCoinPct": 1,
+          "levelUpBonusCoinPct": 1,
+          "purchaseBonusCoinPct": 1,
+          "wagerBonusCoinPct": 1,
+          "dailyCashbackMax": 5,
+          "monthlyCashbackMax": 7
+        },
+        {
+          "id": 2,
+          "level": 2,
+          "name": "Silver",
+          "icon": "/images/vip/silver_rank.avif",
+          "depositExp": 5000,
+          "hasVipLoungeAccess": false,
+          "isInvitationOnly": false,
+          "minXp": 25000,
+          "uprankAward": 500,
+          "purchaseBonusCoinPct": 1,
+          "dailyBonusCoinPct": 1,
+          "hasConcierge": false,
+          "hourlyBonusCoinPct": 1,
+          "wagerBonusCoinPct": 1,
+          "levelUpBonusCoinPct": 1,
+          "xpForNext": 80000,
+          "weekAward": 50,
+          "dailyCashbackMax": 5,
+          "monthlyCashbackMax": 7
+        },
+        {
+          "level": 3,
+          "id": 3,
+          "name": "Gold",
+          "depositExp": 20000,
+          "icon": "/images/vip/gold_rank.avif",
+          "purchaseBonusCoinPct": 1,
+          "hasVipLoungeAccess": false,
+          "isInvitationOnly": false,
+          "minXp": 100000,
+          "hasConcierge": false,
+          "dailyBonusCoinPct": 1,
+          "wagerBonusCoinPct": 1,
+          "hourlyBonusCoinPct": 1,
+          "levelUpBonusCoinPct": 1,
+          "uprankAward": 2000,
+          "xpForNext": 400000,
+          "dailyCashbackMax": 5,
+          "monthlyCashbackMax": 7
+        },
+        {
+          "id": 4,
+          "level": 4,
+          "name": "Platinum",
+          "purchaseBonusCoinPct": 1,
+          "hasVipLoungeAccess": false,
+          "isInvitationOnly": false,
+          "depositExp": 100000,
+          "hasConcierge": false,
+          "icon": "/images/vip/platinum_rank.avif",
+          "wagerBonusCoinPct": 1,
+          "dailyBonusCoinPct": 1,
+          "hourlyBonusCoinPct": 1,
+          "levelUpBonusCoinPct": 1,
+          "minXp": 500000,
+          "xpForNext": 2000000,
+          "uprankAward": 10000,
+          "weekAward": 1000,
+          "dailyCashbackMax": 5,
+          "monthlyCashbackMax": 7
+        },
+        {
+          "level": 5,
+          "id": 5,
+          "name": "Diamond",
+          "depositExp": 500000,
+          "hasVipLoungeAccess": false,
+          "wagerBonusCoinPct": 1,
+          "isInvitationOnly": false,
+          "dailyBonusCoinPct": 1,
+          "icon": "/images/vip/diamond_rank.avif",
+          "purchaseBonusCoinPct": 1,
+          "hasConcierge": false,
+          "hourlyBonusCoinPct": 1,
+          "levelUpBonusCoinPct": 1,
+          "minXp": 2500000,
+          "xpForNext": 9000000,
+          "uprankAward": 50000,
+          "weekAward": 5000,
+          "dailyCashbackMax": 5,
+          "monthlyCashbackMax": 7
+        }
+      ]
+    },
+    "wageringConfig": {
+      "defaultWageringMultiplier": 30,
+      "maxBonusBetPercentage": 50,
+      "bonusExpiryDays": 30
+    },
+    "systemLimits": {
+      "maxBetAmount": 100000,
+      "maxDailyLoss": 1000000,
+      "maxSessionLoss": 100000,
+      "minBetAmount": 100
+    },
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+]

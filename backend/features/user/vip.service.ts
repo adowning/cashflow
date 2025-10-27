@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
 
-import db from '../../database';
-import { players } from '../../database/schema';
-import { eq } from 'drizzle-orm';
+import db from "../../database";
+import { players, type TPlayer } from "../../database/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * VIP points calculation and level-up system with cost sharing
@@ -30,7 +30,7 @@ export interface VIPInfo {
   totalPoints: number;
   pointsToNextLevel: number;
   progressToNextLevel: number; // Percentage
-  levelBenefits: VIPLevel['benefits'];
+  levelBenefits: VIPLevel["benefits"];
 }
 
 export interface PointsCalculation {
@@ -52,8 +52,8 @@ export interface CostSharingAllocation {
  */
 const DEFAULT_VIP_LEVELS: VIPLevel[] = [
   {
-    id: 'bronze',
-    name: 'Bronze',
+    id: "bronze",
+    name: "Bronze",
     level: 1,
     minPoints: 0,
     maxPoints: 999,
@@ -65,8 +65,8 @@ const DEFAULT_VIP_LEVELS: VIPLevel[] = [
     },
   },
   {
-    id: 'silver',
-    name: 'Silver',
+    id: "silver",
+    name: "Silver",
     level: 2,
     minPoints: 1000,
     maxPoints: 4999,
@@ -78,8 +78,8 @@ const DEFAULT_VIP_LEVELS: VIPLevel[] = [
     },
   },
   {
-    id: 'gold',
-    name: 'Gold',
+    id: "gold",
+    name: "Gold",
     level: 3,
     minPoints: 5000,
     maxPoints: 19999,
@@ -91,8 +91,8 @@ const DEFAULT_VIP_LEVELS: VIPLevel[] = [
     },
   },
   {
-    id: 'platinum',
-    name: 'Platinum',
+    id: "platinum",
+    name: "Platinum",
     level: 4,
     minPoints: 20000,
     maxPoints: 99999,
@@ -104,8 +104,8 @@ const DEFAULT_VIP_LEVELS: VIPLevel[] = [
     },
   },
   {
-    id: 'diamond',
-    name: 'Diamond',
+    id: "diamond",
+    name: "Diamond",
     level: 5,
     minPoints: 100000,
     maxPoints: Infinity,
@@ -122,7 +122,7 @@ const DEFAULT_VIP_LEVELS: VIPLevel[] = [
  * Calculate VIP points for a wager and win
  */
 export function calculateXpForWagerAndWins(
-  wagerAmount: number, // Amount in cents
+  wagerAmount: number // Amount in cents
   // currentVIP?: VIPInfo,
 ): PointsCalculation {
   // Base points: 1 point per $1 wagered
@@ -167,10 +167,14 @@ function getVIPMultiplier(level: number): number {
  * Check if user levels up with new points
  */
 function checkLevelUp(currentLevel: number, newTotalPoints: number): boolean {
-  const currentLevelConfig = DEFAULT_VIP_LEVELS.find((l) => l.level === currentLevel);
+  const currentLevelConfig = DEFAULT_VIP_LEVELS.find(
+    (l) => l.level === currentLevel
+  );
   if (!currentLevelConfig) return false;
 
-  const nextLevel = DEFAULT_VIP_LEVELS.find((l) => l.level === currentLevel + 1);
+  const nextLevel = DEFAULT_VIP_LEVELS.find(
+    (l) => l.level === currentLevel + 1
+  );
   if (!nextLevel) return false;
 
   return newTotalPoints >= nextLevel.minPoints;
@@ -181,7 +185,7 @@ function checkLevelUp(currentLevel: number, newTotalPoints: number): boolean {
  */
 export async function addXpToUser(
   userId: string,
-  pointsToAdd: number,
+  pointsToAdd: number
 ): Promise<{
   success: boolean;
   levelUp: boolean;
@@ -192,15 +196,15 @@ export async function addXpToUser(
   try {
     const result = await db.transaction(async (tx) => {
       // Get current user data
-      const user = (await tx.query.players.findFirst({
+      const player = (await tx.query.players.findFirst({
         where: eq(players.id, userId),
         // with: {
         //   balances: true,
         // },
-      })) as User | undefined;
+      })) as TPlayer | undefined;
 
-      if (!user) {
-        throw new Error('User not found');
+      if (!player) {
+        throw new Error("User not found");
       }
 
       // For now, storing VIP points in a custom field
@@ -236,17 +240,16 @@ export async function addXpToUser(
 
     // Get updated VIP info
     const newVIPInfo = await getVIPInfo(userId);
-
     return {
       ...result,
       newVIPInfo,
     };
   } catch (error) {
-    console.error('Add XP to user failed:', error);
+    console.error("Add XP to user failed:", error);
     return {
       success: false,
       levelUp: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -267,12 +270,18 @@ function calculateVIPLevel(totalPoints: number): number {
 /**
  * Handle level up benefits and notifications
  */
-async function handleLevelUp(tx: unknown, userId: string, newLevel: number): Promise<void> {
+async function handleLevelUp(
+  tx: unknown,
+  userId: string,
+  newLevel: number
+): Promise<void> {
   const levelConfig = DEFAULT_VIP_LEVELS.find((l) => l.level === newLevel);
   if (!levelConfig) return;
 
   // Log level up (in production, this would trigger notifications)
-  console.log(`User ${userId} leveled up to ${levelConfig.name} (Level ${newLevel})`);
+  console.log(
+    `User ${userId} leveled up to ${levelConfig.name} (Level ${newLevel})`
+  );
 
   // Apply level up benefits
   if (levelConfig.benefits.cashback) {
@@ -292,7 +301,7 @@ async function handleLevelUp(tx: unknown, userId: string, newLevel: number): Pro
 async function grantLevelUpCashback(
   _tx: unknown,
   userId: string,
-  cashbackPercent: number,
+  cashbackPercent: number
 ): Promise<void> {
   // This would create a cashback bonus record
   // Implementation depends on your cashback system
@@ -305,7 +314,7 @@ async function grantLevelUpCashback(
 async function grantLevelUpFreeSpins(
   _tx: unknown,
   userId: string,
-  freeSpinsCount: number,
+  freeSpinsCount: number
 ): Promise<void> {
   // This would create a free spins bonus record
   // Implementation depends on your free spins system
@@ -319,13 +328,13 @@ export async function getVIPInfo(userId: string): Promise<VIPInfo | null> {
   const user = (await db.query.players.findFirst({
     where: eq(players.id, userId),
     with: {
-      wallets: {
-        with: {
-          balances: true,
-        },
-      },
+      // wallets: {
+      //   with: {
+      //     balances: true,
+      //   },
+      // },
     },
-  })) as User | undefined;
+  })) as TPlayer | undefined;
 
   if (!user) {
     return null;
@@ -341,11 +350,14 @@ export async function getVIPInfo(userId: string): Promise<VIPInfo | null> {
   }
 
   // Calculate progress to next level
-  const nextLevel = DEFAULT_VIP_LEVELS.find((l) => l.level === currentLevel + 1);
+  const nextLevel = DEFAULT_VIP_LEVELS.find(
+    (l) => l.level === currentLevel + 1
+  );
   const pointsToNextLevel = nextLevel ? nextLevel.minPoints - totalPoints : 0;
   const progressToNextLevel =
     nextLevel && nextLevel.minPoints > 0
-      ? ((totalPoints - levelConfig.minPoints) / (nextLevel.minPoints - levelConfig.minPoints)) *
+      ? ((totalPoints - levelConfig.minPoints) /
+          (nextLevel.minPoints - levelConfig.minPoints)) *
         100
       : 100;
 
@@ -364,7 +376,7 @@ export async function getVIPInfo(userId: string): Promise<VIPInfo | null> {
  * Calculate cost sharing for VIP benefits across operators
  */
 export async function calculateCostSharing(
-  benefitCost: number, // Cost in cents
+  benefitCost: number // Cost in cents
 ): Promise<CostSharingAllocation> {
   // Get user's activity across all operators (last 30 days)
   const thirtyDaysAgo = new Date();
@@ -376,7 +388,7 @@ export async function calculateCostSharing(
 
   const totalActivity = Object.values(operatorActivity).reduce(
     (sum, activity) => sum + activity,
-    0,
+    0
   );
 
   if (totalActivity === 0) {
@@ -391,7 +403,9 @@ export async function calculateCostSharing(
   // Calculate operator shares based on activity proportion
   const operatorShares: Record<string, number> = {};
   for (const [operatorId, activity] of Object.entries(operatorActivity)) {
-    operatorShares[operatorId] = Math.floor((activity / totalActivity) * benefitCost);
+    operatorShares[operatorId] = Math.floor(
+      (activity / totalActivity) * benefitCost
+    );
   }
 
   // Platform covers 20% of costs (configurable)
@@ -400,12 +414,15 @@ export async function calculateCostSharing(
 
   // Adjust for rounding errors
   const totalAllocated =
-    platformShare + Object.values(operatorShares).reduce((sum, share) => sum + share, 0);
+    platformShare +
+    Object.values(operatorShares).reduce((sum, share) => sum + share, 0);
   const roundingDifference = benefitCost - totalAllocated;
 
   if (roundingDifference !== 0) {
     // Add/subtract rounding difference to largest operator share
-    const largestOperator = Object.entries(operatorShares).sort(([, a], [, b]) => b - a)[0];
+    const largestOperator = Object.entries(operatorShares).sort(
+      ([, a], [, b]) => b - a
+    )[0];
     if (largestOperator) {
       operatorShares[largestOperator[0]]! += roundingDifference;
     }
@@ -442,7 +459,7 @@ async function getUserOperatorActivity(): Promise<Record<string, number>> {
  */
 export async function processVIPCashback(
   userId: string,
-  period: 'weekly' | 'monthly',
+  period: "weekly" | "monthly"
 ): Promise<{
   success: boolean;
   cashbackAmount: number;
@@ -456,20 +473,22 @@ export async function processVIPCashback(
         success: false,
         cashbackAmount: 0,
         allocation: { platformShare: 0, operatorShares: {}, totalCost: 0 },
-        error: 'User not eligible for cashback',
+        error: "User not eligible for cashback",
       };
     }
 
     // Calculate cashback based on period activity
     const periodActivity = await getUserPeriodActivity(userId, period);
-    const cashbackAmount = Math.floor(periodActivity * (vipInfo.levelBenefits.cashback / 100));
+    const cashbackAmount = Math.floor(
+      periodActivity * (vipInfo.levelBenefits.cashback / 100)
+    );
 
     if (cashbackAmount <= 0) {
       return {
         success: false,
         cashbackAmount: 0,
         allocation: { platformShare: 0, operatorShares: {}, totalCost: 0 },
-        error: 'No cashback earned',
+        error: "No cashback earned",
       };
     }
 
@@ -485,12 +504,12 @@ export async function processVIPCashback(
       allocation,
     };
   } catch (error) {
-    console.error('VIP cashback processing failed:', error);
+    console.error("VIP cashback processing failed:", error);
     return {
       success: false,
       cashbackAmount: 0,
       allocation: { platformShare: 0, operatorShares: {}, totalCost: 0 },
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -500,13 +519,13 @@ export async function processVIPCashback(
  */
 async function getUserPeriodActivity(
   _userId: string,
-  period: 'weekly' | 'monthly',
+  period: "weekly" | "monthly"
 ): Promise<number> {
   // Calculate period dates
   const now = new Date();
   const periodStart = new Date(now);
 
-  if (period === 'weekly') {
+  if (period === "weekly") {
     periodStart.setDate(now.getDate() - 7);
   } else {
     periodStart.setMonth(now.getMonth() - 1);

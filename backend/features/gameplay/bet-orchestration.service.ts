@@ -1,19 +1,24 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
-import { deductBetAmount, addWinnings, getBalance } from './balance-management.service';
+import {
+  deductBetAmount,
+  addWinnings,
+  getOrCreateBalance,
+  getDetailedBalance,
+} from './balance-management.service';
 import { logGGRContribution } from '../../shared/ggr.service';
 import { getJackpotPools, processJackpotContribution } from './jackpot.service';
 import { notifyError, sendPostBetNotifications } from '../../shared/notifications.service';
 import { logTransaction } from '../../shared/transaction.service';
 
 import db from '@@/database';
-import { transactions } from '@@/database/schema';
+import { transactions, transactionTypeEnum } from '@@/database/schema';
 import { sql } from 'drizzle-orm';
-import type { validateBet } from '@/shared/restrictions.service';
+import { validateBet } from '@/shared/restrictions.service';
 import { calculateXpForWagerAndWins, addXpToUser, getVIPLevels } from '../user/vip.service';
 import { WageringManager } from './wagering.manager';
 
 // TODO: Instantiate settings properly
-const wageringManager = new WageringManager(db as any, {} as any);
+const wageringManager = new WageringManager(db as any);
 
 /**
  * Bet processing orchestration service
@@ -26,7 +31,7 @@ export interface BetRequest {
   wagerAmount: number; // Amount in cents
   operatorId?: string;
   sessionId?: string;
-  affiliateId?: string;
+  affiliateName?: string;
 }
 
 export interface BetOutcome {
@@ -81,6 +86,7 @@ export async function processBet(
     });
 
     if (!validation.valid) {
+      console.log('Bet validation failed');
       await notifyError(betRequest.userId, validation.reason || 'Bet validation failed');
       return {
         userId: betRequest.userId,
@@ -100,11 +106,11 @@ export async function processBet(
 
     // 2. Get user's active balance
 
-    const userBalance = await getBalance(betRequest.userId);
+    const userBalance = await getOrCreateBalance(betRequest.userId);
     if (!userBalance) {
       throw new Error('User balance not found');
     }
-    const runningBalance = userBalance.totalBalance;
+    const runningBalance = userBalance.realBalance + userBalance.bonusBalance;
 
     // 3. Process jackpot contribution
     const jackpotResult = await processJackpotContribution(
@@ -112,7 +118,10 @@ export async function processBet(
       betRequest.wagerAmount,
     ).catch((error) => {
       console.error('Jackpot contribution failed, continuing with zero contribution:', error);
-      return { contributions: { minor: 0, major: 0, mega: 0 }, totalContribution: 0 };
+      return {
+        contributions: { minor: 0, major: 0, mega: 0 },
+        totalContribution: 0,
+      };
     });
     const totalJackpotContribution = Object.values(jackpotResult.contributions).reduce(
       (sum, contrib) => sum + contrib,
@@ -149,7 +158,11 @@ export async function processBet(
      * This ensures fair distribution and prevents bonus exploitation while maintaining
      * accurate balance tracking for compliance and auditing.
      */
-    let winningsAddition: { success: boolean; newBalance: number; error?: string } = {
+    let winningsAddition: {
+      success: boolean;
+      newBalance: number;
+      error?: string;
+    } = {
       success: true,
       newBalance: 0,
     };
@@ -260,36 +273,41 @@ export async function processBet(
     const vipUpdate = await addXpToUser(betRequest.userId, vipCalculation.totalPoints).catch(
       (error) => {
         console.error('VIP update failed, continuing:', error);
-        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
       },
     );
 
     // 9. Update wagering progress
-    const wageringUpdate = await wageringManager.updateWageringProgress({
-      userId: betRequest.userId,
-      wagerAmount: betRequest.wagerAmount,
-    }).catch((error) => {
-      console.error('Wagering progress update failed, continuing:', error);
-      return {
-        success: false,
-        completedRequirements: [],
-        newProgress: {
-          depositRequirements: [],
-          bonusRequirements: [],
-          overallProgress: 0,
-          totalRequired: 0,
-          totalWagered: 0,
-        },
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    });
+    const wageringUpdate = await wageringManager
+      .updateWageringProgress({
+        userId: betRequest.userId,
+        wagerAmount: betRequest.wagerAmount,
+      })
+      .catch((error) => {
+        console.error('Wagering progress update failed, continuing:', error);
+        return {
+          success: false,
+          completedRequirements: [],
+          newProgress: {
+            depositRequirements: [],
+            bonusRequirements: [],
+            overallProgress: 0,
+            totalRequired: 0,
+            totalWagered: 0,
+          },
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      });
 
     // 10. Log GGR contribution
     const ggrResult = await logGGRContribution({
       betId: `bet_${Date.now()}`,
       userId: betRequest.userId,
-      affiliateId: betRequest.affiliateId,
-      operatorId: betRequest.operatorId || 'default',
+      affiliateName: betRequest.affiliateName || 'adminuser',
+      operatorId: betRequest.operatorId || 'house',
       gameId: betRequest.gameId,
       wagerAmount: betRequest.wagerAmount,
       winAmount: gameOutcome.winAmount,
@@ -301,37 +319,36 @@ export async function processBet(
 
     // 11. Log comprehensive transaction
     // Query actual final balances from database to ensure accuracy including bonus conversions
-    const finalBalances = await getBalance(userBalance.playerId);
+    const finalBalances = await getDetailedBalance(userBalance.playerId);
     if (!finalBalances) {
       throw new Error('Failed to retrieve final player balance for transaction logging');
     }
 
     // Capture pre balances before any deductions
-    const preRealBalance = userBalance.realBalance;
-    const preBonusBalance = userBalance.bonusBalance;
+    const realBalanceBefore = userBalance.realBalance;
+    const realBalanceAfter = userBalance.bonusBalance;
 
     // Use actual final balances from database (accounts for all conversions and operations)
-    const postRealBalance = finalBalances.realBalance;
-    const postBonusBalance = finalBalances.bonusBalance;
+    const bonusBalanceBefore = finalBalances.realBalance;
+    const bonusBalanceAfter = finalBalances.bonusBalance;
 
     const transactionId = await logTransaction({
-      userId: betRequest.userId,
+      playerId: betRequest.userId,
       gameId: betRequest.gameId,
       operatorId: betRequest.operatorId || 'default',
       wagerAmount: betRequest.wagerAmount,
       winAmount: gameOutcome.winAmount,
-      betType: balanceDeduction.balanceType,
-      preRealBalance,
-      postRealBalance,
-      preBonusBalance,
-      postBonusBalance,
+      type: 'BET',
+      realBalanceBefore,
+      realBalanceAfter,
+      bonusBalanceBefore,
+      bonusBalanceAfter,
       ggrContribution: ggrResult.ggrAmount,
       jackpotContribution: totalJackpotContribution,
       vipPointsAdded: vipCalculation.totalPoints,
-      processingTime, // Add actual processing time for performance tracking
-      affiliateId: betRequest.affiliateId,
+      affiliateName: betRequest.affiliateName,
       sessionId: betRequest.sessionId,
-      currency: 'USD',
+      status: 'PENDING',
     });
 
     if (!transactionId) {
@@ -354,18 +371,21 @@ export async function processBet(
         (gameOutcome.winAmount > 0 ? gameOutcome.winAmount : 0) -
         balanceDeduction.deductedFrom.bonuses.reduce((sum, b) => sum + b.amount, 0);
     }
-    await sendPostBetNotifications(betRequest.userId, {
-      balanceChange: {
-        realBalance: realBalanceChange,
-        bonusBalance: bonusBalanceChange,
-        totalBalance: finalBalances.totalBalance, // Use actual final balance
-        changeAmount: gameOutcome.winAmount - betRequest.wagerAmount,
-        changeType: gameOutcome.winAmount > 0 ? 'win' : 'bet',
-      },
-      vipUpdate: vipUpdate.success,
-      wageringUpdate: wageringUpdate.success,
-      jackpotContribution: totalJackpotContribution,
-    }).catch((error) => {
+    await sendPostBetNotifications(
+      betRequest.userId,
+      JSON.stringify({
+        balanceChange: {
+          realBalance: realBalanceChange,
+          bonusBalance: bonusBalanceChange,
+          totalBalance: finalBalances.totalBalance, // Use actual final balance
+          changeAmount: (gameOutcome.winAmount - betRequest.wagerAmount).toString(),
+          changeType: gameOutcome.winAmount > 0 ? 'win' : 'bet',
+        },
+        vipUpdate: vipUpdate.success,
+        wageringUpdate: wageringUpdate,
+        jackpotContribution: totalJackpotContribution,
+      }),
+    ).catch((error) => {
       console.error('Realtime notifications failed, continuing:', error);
     });
 
@@ -574,7 +594,7 @@ async function checkWalletService(): Promise<boolean> {
     // Test wallet service by attempting to get balances for a test user
     // Using a non-existent user ID to avoid real data issues
     const testUserId = 'health-check-test-user';
-    const playerBalance = await getBalance(testUserId);
+    const playerBalance = await getDetailedBalance(testUserId);
 
     // Validate that balance was returned (service should respond with data)
     if (!playerBalance) {

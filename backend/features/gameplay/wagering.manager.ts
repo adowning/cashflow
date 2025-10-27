@@ -1,12 +1,25 @@
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { z } from 'zod';
-import { eq } from 'drizzle-orm';
-import type { Settings } from '@@/database/schema/other.schema.js';
-import { TPlayerBalancess, type TTPlayerBalancess } from '@@/database/schema/gameplay.schema.js';
+import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { z } from "zod";
+import { eq } from "drizzle-orm";
+import type { Settings } from "@/database/schema/other.schema.js";
+import {
+  playerBalances,
+  TPlayerBalancess,
+  type TPlayerBalances,
+  type TTPlayerBalancess,
+  type TWithdrawals,
+} from "@/database/schema";
+import { configurationManager } from "@/config/config.js";
 
 // Input validation schemas
-const PositiveInt = z.number().int().positive('Amount must be a positive integer (cents).');
-const NonNegativeInt = z.number().int().min(0, 'Amount must be a non-negative integer (cents).');
+const PositiveInt = z
+  .number()
+  .int()
+  .positive("Amount must be a positive integer (cents).");
+const NonNegativeInt = z
+  .number()
+  .int()
+  .min(0, "Amount must be a non-negative integer (cents).");
 
 export const DepositSchema = z.object({
   playerId: z.string().min(1),
@@ -78,19 +91,19 @@ export interface PlayerStatistics {
 // --- 4. WAGERING MANAGER SERVICE CLASS ---
 
 // Define the DB schema type for the constructor
-type AppSchema = typeof import('./WageringManager.ts');
+type AppSchema = typeof import("./wagering.manager.ts");
 type DbInstance = PostgresJsDatabase<AppSchema>;
 
 export class WageringManager {
   private db: DbInstance;
   private settings: Settings;
-
-  constructor(db: DbInstance, settings: Settings) {
+  private configManager: any | null;
+  constructor(db: DbInstance) {
     this.db = db;
-    this.settings = settings;
-
-    if (!settings) {
-      throw new Error('Platform settings must be provided to WageringManager.');
+    this.settings = configurationManager.getConfiguration();
+    this.configManager = configurationManager;
+    if (!this.settings) {
+      throw new Error("Platform settings must be provided to WageringManager.");
     }
   }
 
@@ -110,7 +123,10 @@ export class WageringManager {
 
     // Create a new balance
     const newBalance = { playerId };
-    const insertedBalances = await this.db.insert(TPlayerBalancess).values(newBalance).returning();
+    const insertedBalances = await this.db
+      .insert(TPlayerBalancess)
+      .values(newBalance)
+      .returning();
 
     return insertedBalances[0];
   }
@@ -119,16 +135,25 @@ export class WageringManager {
    * Applies wagering to all active requirements and checks for bonus conversion.
    * This is a core private method.
    */
-  private _applyWagering(balance: TPlayerBalances, wagerAmount: number): TPlayerBalances {
+  private _applyWagering(
+    balance: TPlayerBalances,
+    wagerAmount: number
+  ): TPlayerBalances {
     // 1. Reduce all active wagering requirements
-    balance.depositWRRemaining = Math.max(0, balance.depositWRRemaining - wagerAmount);
-    balance.bonusWRRemaining = Math.max(0, balance.bonusWRRemaining - wagerAmount);
+    balance.depositWRRemaining = Math.max(
+      0,
+      balance.depositWRRemaining - wagerAmount
+    );
+    balance.bonusWRRemaining = Math.max(
+      0,
+      balance.bonusWRRemaining - wagerAmount
+    );
 
     // 2. Check for Bonus Conversion
     // If bonus WR is now 0 and there is a bonus balance, convert it to real money.
     if (balance.bonusWRRemaining === 0 && balance.bonusBalance > 0) {
       console.log(
-        `[WageringManager] CONVERSION: Player ${balance.playerId} converted ${balance.bonusBalance} bonus to real.`,
+        `[WageringManager] CONVERSION: Player ${balance.playerId} converted ${balance.bonusBalance} bonus to real.`
       );
       balance.realBalance += balance.bonusBalance;
       balance.bonusBalance = 0;
@@ -150,7 +175,7 @@ export class WageringManager {
     const depositWROwed = amount * this.settings.depositWRMultiplier;
 
     const updatedBalances = await this.db
-      .update(TPlayerBalancess)
+      .update(playerBalances)
       .set({
         realBalance: balance.realBalance + amount,
         totalDeposited: balance.totalDeposited + amount,
@@ -191,7 +216,9 @@ export class WageringManager {
    * Grants free spins to a player.
    * This increases the free spins counter. Liability is tracked separately.
    */
-  public async grantFreeSpins(input: GrantFreeSpinsInput): Promise<TPlayerBalances> {
+  public async grantFreeSpins(
+    input: GrantFreeSpinsInput
+  ): Promise<TPlayerBalances> {
     const { playerId, count } = GrantFreeSpinsSchema.parse(input);
     const balance = await this.getOrCreateBalance(playerId);
 
@@ -224,7 +251,7 @@ export class WageringManager {
     } else {
       // This is a cash bet.
       if (betAmount <= 0) {
-        throw new Error('Cash bet amount must be positive.');
+        throw new Error("Cash bet amount must be positive.");
       }
       if (balance.realBalance + balance.bonusBalance < betAmount) {
         throw new Error(`Insufficient total balance for player ${playerId}.`);
@@ -304,21 +331,21 @@ export class WageringManager {
    * Handles a player withdrawal request.
    * Enforces wagering requirements and bonus forfeiture.
    */
-  public async handleWithdraw(input: WithdrawSchema): Promise<TPlayerBalances> {
+  public async handleWithdraw(input: TWithdrawals): Promise<TPlayerBalances> {
     const { playerId, amount } = WithdrawSchema.parse(input);
     const balance = await this.getOrCreateBalance(playerId);
 
     // 1. Check Deposit Wagering
     if (balance.depositWRRemaining > 0) {
       throw new Error(
-        `Player ${playerId} must complete deposit wagering. $${balance.depositWRRemaining / 100} remaining.`,
+        `Player ${playerId} must complete deposit wagering. $${balance.depositWRRemaining / 100} remaining.`
       );
     }
 
     // 2. Check Real Balance
     if (balance.realBalance < amount) {
       throw new Error(
-        `Insufficient real balance for player ${playerId}. Requested ${amount}, has ${balance.realBalance}.`,
+        `Insufficient real balance for player ${playerId}. Requested ${amount}, has ${balance.realBalance}.`
       );
     }
 
@@ -329,7 +356,7 @@ export class WageringManager {
     // Standard Rule: Withdrawing forfeits any active bonus.
     if (balance.bonusBalance > 0 || balance.bonusWRRemaining > 0) {
       console.log(
-        `[WageringManager] FORFEITURE: Player ${playerId} forfeited ${balance.bonusBalance} bonus on withdrawal.`,
+        `[WageringManager] FORFEITURE: Player ${playerId} forfeited ${balance.bonusBalance} bonus on withdrawal.`
       );
       balance.bonusBalance = 0;
       balance.bonusWRRemaining = 0;
@@ -356,7 +383,7 @@ export class WageringManager {
   /**
    * Gets the current balances and WR status for a player.
    */
-  public async getTPlayerBalancess(playerId: string): Promise<TPlayerBalancess> {
+  public async getPlayerBalances(playerId: string): Promise<TPlayerBalancess> {
     const balance = await this.getOrCreateBalance(playerId);
     return {
       playerId: balance.playerId,
@@ -371,11 +398,16 @@ export class WageringManager {
   /**
    * Gets a full statistical report for a player.
    */
-  public async getPlayerStatistics(playerId: string): Promise<PlayerStatistics> {
+  public async getPlayerStatistics(
+    playerId: string
+  ): Promise<PlayerStatistics> {
     const balance = await this.getOrCreateBalance(playerId);
 
     const totalLoss = balance.totalWagered - balance.totalWon;
-    const rtp = balance.totalWagered > 0 ? (balance.totalWon / balance.totalWagered) * 100 : 0;
+    const rtp =
+      balance.totalWagered > 0
+        ? (balance.totalWon / balance.totalWagered) * 100
+        : 0;
     const netDeposits = balance.totalDeposited - balance.totalWithdrawn;
     const estimatedFreeSpinLiability =
       balance.freeSpinsRemaining * this.settings.avgFreeSpinWinValue;

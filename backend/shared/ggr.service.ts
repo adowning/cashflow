@@ -1,7 +1,8 @@
-import { nanoid } from 'nanoid';
-import db from '../database';
-import { affiliateLogs, commissions } from '../database/schema';
-import { and, count, desc, eq, gte, lte } from 'drizzle-orm';
+import { nanoid } from "nanoid";
+import db from "../database";
+import { affiliateLogs, commissions, players } from "../database/schema";
+import { and, count, desc, eq, gte, lte } from "drizzle-orm";
+import { configurationManager } from "@/config/config";
 
 /**
  * GGR and affiliate logging system for weekly commission calculations
@@ -11,7 +12,7 @@ import { and, count, desc, eq, gte, lte } from 'drizzle-orm';
 export interface GGRContribution {
   betId: string;
   userId: string;
-  affiliateId?: string;
+  affiliateName?: string;
   operatorId: string;
   gameId: string;
   wagerAmount: number; // Amount in cents
@@ -47,7 +48,7 @@ export interface AffiliateEarnings {
  * Log GGR contribution from a bet
  */
 export async function logGGRContribution(
-  contribution: Omit<GGRContribution, 'ggrAmount' | 'timestamp'>,
+  contribution: Omit<GGRContribution, "ggrAmount" | "timestamp">
 ): Promise<{
   success: boolean;
   ggrAmount: number;
@@ -64,11 +65,14 @@ export async function logGGRContribution(
 
     // In production, this would be stored in a ggr_contributions table
     // For now, logging to console and storing in affiliate logs if applicable
-    console.log('GGR Contribution:', ggrLog);
 
     // If user has an affiliate, log to affiliate logs for commission calculation
-    if (contribution.affiliateId) {
-      await logAffiliateContribution(contribution.affiliateId, contribution, ggrAmount);
+    if (contribution.affiliateName) {
+      await logAffiliateContribution(
+        contribution.affiliateName,
+        contribution,
+        ggrAmount
+      );
     }
 
     return {
@@ -76,11 +80,11 @@ export async function logGGRContribution(
       ggrAmount,
     };
   } catch (error) {
-    console.error('GGR logging failed:', error);
+    console.error("GGR logging failed:", error);
     return {
       success: false,
       ggrAmount: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -89,36 +93,40 @@ export async function logGGRContribution(
  * Log contribution to affiliate for commission tracking
  */
 async function logAffiliateContribution(
-  affiliateId: string,
-  contribution: Omit<GGRContribution, 'ggrAmount' | 'timestamp'>,
-  ggrAmount: number,
+  affliateName: string,
+  contribution: Omit<GGRContribution, "ggrAmount" | "timestamp">,
+  ggrAmount: number
 ): Promise<void> {
   // Get affiliate info
-  const affiliate = await db.query.affiliates.findFirst({
-    where: eq(affiliates.id, affiliateId),
+  const affiliate = await db.query.players.findFirst({
+    where: and(
+      eq(players.playername, affliateName),
+      eq(players.isAffiliate, true)
+    ),
   });
 
   if (!affiliate) {
-    console.error(`Affiliate ${affiliateId} not found`);
+    console.error(`Affiliate ${affliateName} not found`);
     return;
   }
 
   // Create affiliate log entry for commission calculation
   // This would typically go into an affiliate_earnings or similar table
-  console.log(
-    `Affiliate contribution logged: Affiliate ${affiliate.playername}, GGR: ${ggrAmount}`,
-  );
-  const commissionrate = await getAffiliateCommissionRate(affiliateId);
+  // console.log(
+  //   `Affiliate contribution logged: Affiliate ${affiliate.playername}, GGR: ${ggrAmount}`
+  // );
+  const commissionrate = await getAffiliateCommissionRate(affiliate.id);
   // In production, you'd insert into affiliate_logs or a dedicated earnings table
   await db.insert(affiliateLogs).values({
     id: nanoid(),
-    invitorId: affiliateId,
+    invitorId: affiliate.id,
     childId: contribution.userId,
     referralCode: affiliate.referralCode,
-    currency: contribution.currency,
     betAmount: contribution.wagerAmount,
-    commissionAmount: Math.floor(ggrAmount * commissionrate), // 5% default
-    // ... other fields
+    ggrAmount: ggrAmount,
+    commissionRate: commissionrate,
+    commissionAmount: Math.floor(ggrAmount * commissionrate),
+    tier: 0, // Direct referral (tier 0)
   });
 }
 
@@ -127,7 +135,7 @@ async function logAffiliateContribution(
  */
 export async function calculateWeeklyAffiliateCommision(
   affiliateId: string,
-  weekStart?: Date,
+  weekStart?: Date
 ): Promise<WeeklyGGR | null> {
   try {
     // Calculate week boundaries
@@ -136,8 +144,8 @@ export async function calculateWeeklyAffiliateCommision(
     const endOfWeek = getEndOfWeek(startOfWeek);
 
     // Get affiliate info
-    const affiliate = await db.query.affiliates.findFirst({
-      where: eq(affiliates.id, affiliateId),
+    const affiliate = await db.query.players.findFirst({
+      where: eq(players.id, affiliateId),
     });
 
     if (!affiliate) {
@@ -150,19 +158,22 @@ export async function calculateWeeklyAffiliateCommision(
       where: and(
         eq(affiliateLogs.invitorId, affiliateId),
         gte(affiliateLogs.createdAt, startOfWeek),
-        lte(affiliateLogs.createdAt, endOfWeek),
+        lte(affiliateLogs.createdAt, endOfWeek)
       ),
     });
 
     // Calculate totals
-    const totalWagers = affiliateContributions.reduce((sum, log) => sum + Number(log.betAmount), 0);
+    const totalWagers = affiliateContributions.reduce(
+      (sum, log) => sum + Number(log.betAmount),
+      0
+    );
     const totalCommissionWagers = affiliateContributions.reduce(
       (sum, log) => sum + Number(log.commissionWager),
-      0,
+      0
     );
     const totalReferralAmount = affiliateContributions.reduce(
       (sum, log) => sum + Number(log.referralAmount),
-      0,
+      0
     );
 
     // GGR = Total Wagers - Total Wins - Bonuses/Promo Costs
@@ -181,14 +192,14 @@ export async function calculateWeeklyAffiliateCommision(
       totalWagers,
       totalWins: affiliateContributions.reduce(
         (sum, log) => sum + Number(log.totalReferralAmount),
-        0,
+        0
       ),
       commissionRate,
       commissionAmount,
       paidOut: false,
     };
   } catch (error) {
-    console.error('Weekly GGR calculation failed:', error);
+    console.error("Weekly GGR calculation failed:", error);
     return null;
   }
 }
@@ -196,10 +207,12 @@ export async function calculateWeeklyAffiliateCommision(
 /**
  * Get affiliate earnings summary
  */
-export async function getAffiliateEarnings(affiliateId: string): Promise<AffiliateEarnings | null> {
+export async function getAffiliateEarnings(
+  affiliateId: string
+): Promise<AffiliateEarnings | null> {
   try {
-    const affiliate = await db.query.affiliates.findFirst({
-      where: eq(affiliates.id, affiliateId),
+    const affiliate = await db.query.players.findFirst({
+      where: eq(players.id, affiliateId),
     });
 
     if (!affiliate) {
@@ -214,7 +227,7 @@ export async function getAffiliateEarnings(affiliateId: string): Promise<Affilia
     // Calculate totals
     const totalCommissionAmount = affiliateContributions.reduce(
       (sum, log) => sum + Number(log.commissionAmount),
-      0,
+      0
     );
 
     // In production, you'd track which earnings have been paid
@@ -230,7 +243,7 @@ export async function getAffiliateEarnings(affiliateId: string): Promise<Affilia
       nextPayoutDate: getNextPayoutDate(),
     };
   } catch (error) {
-    console.error('Affiliate earnings calculation failed:', error);
+    console.error("Affiliate earnings calculation failed:", error);
     return null;
   }
 }
@@ -249,18 +262,21 @@ export async function processWeeklyAffiliatePayouts(): Promise<{
     const weekStart = getStartOfWeek(new Date());
 
     // Get all affiliates
-    const affiliates = await db.query.affiliates.findMany();
+    const affiliates = await db.query.players.findMany();
 
     let payoutsProcessed = 0;
     let totalPayoutAmount = 0;
 
     for (const affiliate of affiliates) {
-      const weeklyGGR = await calculateWeeklyAffiliateCommision(affiliate.id, weekStart);
+      const weeklyGGR = await calculateWeeklyAffiliateCommision(
+        affiliate.id,
+        weekStart
+      );
 
       if (weeklyGGR && weeklyGGR.commissionAmount > 0) {
         // Process payout (in production, this would credit affiliate's account)
         console.log(
-          `Processing payout for affiliate ${affiliate.playername}: $${weeklyGGR.commissionAmount / 100}`,
+          `Processing payout for affiliate ${affiliate.playername}: $${weeklyGGR.commissionAmount / 100}`
         );
 
         // Mark as paid out
@@ -278,12 +294,12 @@ export async function processWeeklyAffiliatePayouts(): Promise<{
       totalPayoutAmount,
     };
   } catch (error) {
-    console.error('Weekly affiliate payout processing failed:', error);
+    console.error("Weekly affiliate payout processing failed:", error);
     return {
       success: false,
       payoutsProcessed: 0,
       totalPayoutAmount: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -293,7 +309,7 @@ export async function processWeeklyAffiliatePayouts(): Promise<{
  */
 export async function getGGRStatistics(
   startDate?: Date,
-  endDate?: Date,
+  endDate?: Date
 ): Promise<{
   totalGGR: number;
   totalWagers: number;
@@ -311,21 +327,29 @@ export async function getGGRStatistics(
   // In production, this would query actual GGR data
   // For now, using affiliate logs as proxy
   const affiliateContributions = await db.query.affiliateLogs.findMany({
-    where: and(gte(affiliateLogs.createdAt, periodStart), lte(affiliateLogs.createdAt, periodEnd)),
+    where: and(
+      gte(affiliateLogs.createdAt, periodStart),
+      lte(affiliateLogs.createdAt, periodEnd)
+    ),
   });
 
-  const totalWagers = affiliateContributions.reduce((sum, log) => sum + Number(log.betAmount), 0);
+  const totalWagers = affiliateContributions.reduce(
+    (sum, log) => sum + Number(log.betAmount),
+    0
+  );
   const totalWins = affiliateContributions.reduce(
     (sum, log) => sum + Number(log.totalReferralAmount),
-    0,
+    0
   );
   const totalGGR = affiliateContributions.reduce(
     (sum, log) => sum + Number(log.commissionWager),
-    0,
+    0
   );
 
   const averageGGR =
-    affiliateContributions.length > 0 ? totalGGR / affiliateContributions.length : 0;
+    affiliateContributions.length > 0
+      ? totalGGR / affiliateContributions.length
+      : 0;
 
   return {
     totalGGR,
@@ -345,7 +369,7 @@ export async function getGGRStatistics(
  */
 export async function getAffiliatePerformance(
   affiliateId: string,
-  days: number = 30,
+  days: number = 30
 ): Promise<{
   affiliateId: string;
   periodDays: number;
@@ -360,25 +384,33 @@ export async function getAffiliatePerformance(
 
   // Get affiliate logs for the period
   const affiliateContributions = await db.query.affiliateLogs.findMany({
-    where: and(eq(affiliateLogs.invitorId, affiliateId), gte(affiliateLogs.createdAt, periodStart)),
+    where: and(
+      eq(affiliateLogs.invitorId, affiliateId),
+      gte(affiliateLogs.createdAt, periodStart)
+    ),
   });
 
   // Count unique referrals
-  const uniqueReferrals = new Set(affiliateContributions.map((log) => log.childId));
+  const uniqueReferrals = new Set(
+    affiliateContributions.map((log) => log.childId)
+  );
   const totalReferrals = uniqueReferrals.size;
 
   // Count active referrals (those with recent activity)
-  const activeReferrals = affiliateContributions.filter((log) => Number(log.betAmount) > 0).length;
+  const activeReferrals = affiliateContributions.filter(
+    (log) => Number(log.betAmount) > 0
+  ).length;
 
   const totalGGR = affiliateContributions.reduce(
     (sum, log) => sum + Number(log.commissionWager),
-    0,
+    0
   );
   const totalCommissions = affiliateContributions.reduce(
     (sum, log) => sum + Number(log.commissionAmount),
-    0,
+    0
   );
-  const averageCommissionPerReferral = totalReferrals > 0 ? totalCommissions / totalReferrals : 0;
+  const averageCommissionPerReferral =
+    totalReferrals > 0 ? totalCommissions / totalReferrals : 0;
 
   return {
     affiliateId,
@@ -423,7 +455,10 @@ function getNextPayoutDate(): Date {
 /**
  * Get GGR contribution for a specific bet
  */
-export function calculateBetGGR(wagerAmount: number, winAmount: number): number {
+export function calculateBetGGR(
+  wagerAmount: number,
+  winAmount: number
+): number {
   return wagerAmount - winAmount;
 }
 
@@ -436,24 +471,21 @@ export function calculateBetGGR(wagerAmount: number, winAmount: number): number 
  */
 async function getAffiliateCommissionRate(currentAffiliateId): Promise<number> {
   // Fetch the first available setting and its related commission configuration.
-  const commissionSetting = await db.query.settings.findFirst({
-    with: {
-      commission: true,
-    },
-  });
+  const settings = configurationManager.getConfiguration();
 
-  if (!commissionSetting?.referralCommissionRate) {
+  if (!settings.referralCommissionRate) {
     console.error(
-      '⚠️ Commission rates are not configured in the database. No commissions will be processed.',
+      "⚠️ Commission rates are not configured in the database. No commissions will be processed."
     );
     return 0; //[]; // Return an empty array if no settings are found
   }
 
   // The rates are stored as percentages (e.g., 30 for 30%), so divide by 100.
-  // The order determines the tier: master -> Tier 0, affiliate -> Tier 1, etc.
-  const rates = JSON.parse(commissionSetting.rates);
 
-  const commissionRates = [rates[0].master, rates[1].affiliate, rates[2].subaffiliate];
+  // The order determines the tier: master -> Tier 0, affiliate -> Tier 1, etc.
+  const rates = settings.rates;
+
+  const commissionRates = [rates.master, rates.affiliate, rates.subaffiliate];
   try {
     // const commissionRates = await getCommissionRates();
     // if (commissionRates.length === 0) {
@@ -462,12 +494,11 @@ async function getAffiliateCommissionRate(currentAffiliateId): Promise<number> {
 
     // let currentAffiliateId: string | null = contribution.affiliateId;
     let tier = 0;
-
     // Traverse up the affiliate hierarchy as long as there is a parent and a defined rate for the tier
     let commissionRate = 0;
     while (currentAffiliateId && tier < commissionRates.length) {
-      const affiliate = await db.query.affiliates.findFirst({
-        where: eq(affiliates.id, currentAffiliateId),
+      const affiliate = await db.query.players.findFirst({
+        where: eq(players.id, currentAffiliateId),
       });
 
       if (!affiliate) {
@@ -499,7 +530,7 @@ async function getAffiliateCommissionRate(currentAffiliateId): Promise<number> {
     }
     return commissionRate;
   } catch (error) {
-    console.error('Failed to process affiliate commissions:', error);
+    console.error("Failed to process affiliate commissions:", error);
     return 0;
   }
 }
@@ -562,7 +593,10 @@ export const getReferralCodeByCode = async (code: string) => {
 };
 
 export const deleteReferralCodeById = async (id: string) => {
-  const result = await db.delete(referralCodes).where(eq(referralCodes.id, id)).returning();
+  const result = await db
+    .delete(referralCodes)
+    .where(eq(referralCodes.id, id))
+    .returning();
   return result.length > 0;
 };
 
@@ -582,7 +616,7 @@ export const getUserByInvitorId = async (invitorId: string) => {
 };
 
 export const getAffiliateByReferralCode = async (referralCode: string) => {
-  return await db.query.affiliates.findFirst({
-    where: eq(affiliates.referralCode, referralCode),
+  return await db.query.players.findFirst({
+    where: eq(players.referralCode, referralCode),
   });
 };
